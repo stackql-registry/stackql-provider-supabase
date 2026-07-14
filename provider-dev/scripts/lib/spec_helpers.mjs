@@ -239,10 +239,14 @@ export function deriveVerb(verb, pathKey) {
 //     object; no projectable columns (source retrieval is a CLI concern)
 //   head_count_endpoint - HEAD has no StackQL verb; the action-run count
 //     is derivable from the list read
+//   non_json_text_response - the branch diff and action-run log reads
+//     return text/plain (standing non-JSON exclusion)
 export function skipReason(pathKey, op, resolve, verb) {
   if (verb === 'head') return 'head_count_endpoint';
   if (/\/functions\/deploy$/.test(pathKey)) return 'multipart_eszip_deploy';
   if (/^\/v1\/oauth\//.test(pathKey)) return 'oauth_user_agent_flow';
   if (/\/functions\/\{[^}]+\}\/body$/.test(pathKey)) return 'untyped_function_body';
+  const { schema, mediaTypes } = success2xx(op);
+  if (!schema && mediaTypes.length > 0 && !mediaTypes.some((m) => m.includes('json'))) return 'non_json_text_response';
   return '';
 }

@@ -48,6 +48,18 @@ Writes `provider-dev/config/endpoint_inventory.csv`: one row per operation with 
 
 The service split is recorded as ordered path rules in `provider-dev/config/service_names.json` (first match wins, unmatched paths fail the build).
 
+Inventory of the pinned snapshot: 169 operations, 160 mapped and 9 skipped with reason codes (4 `oauth_user_agent_flow`, 2 `non_json_text_response`, 1 `multipart_eszip_deploy`, 1 `untyped_function_body`, 1 `head_count_endpoint`). 35 operations carry the vendor's `[Beta]` label and 1 carries `[Alpha]`; 5 are marked deprecated. 143 operations scope by project `ref`, 6 by organization `slug`, 8 by branch id, 12 by the token itself.
+
+| Proposed verb | Operations |
+|---|---|
+| `SELECT` | 71 |
+| `EXEC` | 28 |
+| `UPDATE` | 23 |
+| `INSERT` | 20 |
+| `DELETE` | 18 |
+
+Pagination confirmation: only three endpoints carry paging parameters (`GET /v1/snippets` cursor/limit, `GET /v1/projects/{ref}/actions` offset/limit, `GET /v1/organizations/{slug}/projects` offset/limit) - every other collection returns the complete bounded result. Offset/limit windowing is parameter-driven (WHERE-clause usable), not a traversal scheme to configure.
+
 ## 2. Split into Service Specs
 
 ```bash
