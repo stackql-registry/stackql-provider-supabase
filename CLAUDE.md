@@ -63,9 +63,9 @@ Every step is deterministic and re-runnable. Manual mapping decisions are applie
 
 ### 1. Split into service specs
 
-`npm run split` with `--provider-name supabase`. Candidate service split (final decision from the endpoint inventory, recorded in `provider-dev/config/service_names.json`):
+`npm run split` with `--provider-name supabase`. Final service split from the endpoint inventory (recorded as ordered path rules in `provider-dev/config/service_names.json`; deviations from the original candidate list are recorded in NOTES.md finding 12):
 
-`organizations` (orgs, members), `projects` (projects, health, upgrade status, read replicas, restore/pause), `branches` (preview branches), `config` (auth config, postgres config, pooler, API/PostgREST settings, storage config, SSL enforcement), `network` (restrictions, bans), `domains` (custom domains, vanity subdomains), `functions` (edge functions, function secrets if distinct), `secrets` (project secrets), `database` (the SQL query endpoint, typegen/snippets if present, backups), `storage` (bucket admin if exposed at management level), `billing` (usage/addons if exposed)
+`organizations` (orgs, members, entitlements, project claims), `projects` (projects, org projects list, health, regions, upgrade, read replicas, restore, claim tokens, disk), `branches` (preview branches, action runs), `config` (auth config, signing keys, third-party auth, SSO providers, postgres config, pooler, pgbouncer, API/PostgREST settings, storage config, realtime config, SSL enforcement, pgsodium), `network` (restrictions, bans), `domains` (custom hostnames, vanity subdomains), `functions` (edge functions; function secrets do not exist as a distinct surface), `secrets` (project secrets, API keys, legacy API keys), `database` (the SQL query endpoint, migrations, backups, snippets, JIT access, readonly, typegen, webhooks, CLI login roles), `storage` (bucket admin - list only at management level), `billing` (addons), `analytics` (logs, usage counts, function stats), `advisors` (security/performance lints), `oauth` (OAuth-app user-agent flow - all skip-coded), `profile` (the PAT identity read)
 
 ### 2. Generate mappings
 
