@@ -79,7 +79,7 @@ npm run map-operations
 
 ## Status
 
-Phase 1 (spec acquisition, endpoint inventory, service split, pilot mappings for `projects`, `config` and `secrets`) is in progress. Normalize, provider generation, tests, publication and docs follow in later phases; see [NOTES.md](NOTES.md) for open questions and evidence.
+Phase 1 is complete: the spec is pinned and validated (two deterministic fixes), the 169-operation inventory is built (160 mapped, 9 reason-coded skips), the 15-service split is recorded, and the pilot services (`projects`, `config`, `secrets` - 69 operations, 28 resources) are mapped end to end through split -> generate-mappings -> map-operations with all consistency checks passing. The query-endpoint mapping decision is provisionally `INSERT ... RETURNING` per the snowflake framework, pending live projection evidence (see NOTES.md finding 1). Normalize, provider generation, tests, publication and docs follow in later phases; [NOTES.md](NOTES.md) records the findings, open questions and blockers.
 
 ## License
 
