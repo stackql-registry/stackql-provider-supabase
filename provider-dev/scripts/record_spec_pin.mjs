@@ -43,6 +43,35 @@ const tmpPath = path.join(tmpDir, specFile);
 const content = fs.readFileSync(tmpPath);
 const spec = JSON.parse(content.toString('utf8'));
 
+// Deterministic fixes for the NestJS generator's OpenAPI 3.0 violations
+// (hetzner precedent: fix deterministically before validating, record the
+// counts in the pin). Two defect classes in the current spec:
+//   type_null_to_nullable - `"type": "null"` is JSON Schema 2020-12, not
+//     OpenAPI 3.0; rewritten to `nullable: true` with no type (the always-
+//     null discriminant properties in the JIT access oneOf variants)
+//   hide_definitions_removed - `hideDefinitions` is a @nestjs/swagger
+//     artifact key, not an OpenAPI schema keyword (V1CreateProjectBody)
+const fixes = { type_null_to_nullable: 0, hide_definitions_removed: 0 };
+function applyFixes(node) {
+  if (Array.isArray(node)) { node.forEach(applyFixes); return; }
+  if (node && typeof node === 'object') {
+    if (node.type === 'null') {
+      delete node.type;
+      node.nullable = true;
+      fixes.type_null_to_nullable++;
+    }
+    if ('hideDefinitions' in node) {
+      delete node.hideDefinitions;
+      fixes.hide_definitions_removed++;
+    }
+    for (const v of Object.values(node)) applyFixes(v);
+  }
+}
+applyFixes(spec);
+for (const [name, count] of Object.entries(fixes)) {
+  if (count > 0) console.log(`  fix ${name}: ${count} occurrence(s)`);
+}
+
 // Validate before anything else touches disk
 try {
   await SwaggerParser.validate(structuredClone(spec));
@@ -62,12 +91,14 @@ for (const p of pathKeys) {
 }
 console.log(`Spec: ${spec.info?.title} - openapi ${spec.openapi}, stated version ${spec.info?.version}, ${pathKeys.length} paths, ${opCount} operations`);
 
+// The pin's sha256 is of the raw upstream bytes - drift is always compared
+// against upstream; the written snapshot carries the deterministic fixes
 const sha256 = crypto.createHash('sha256').update(content).digest('hex');
 
 // Deterministic redaction of credential-shaped example values (none needed
 // for the current Supabase spec; add rules here if a refresh introduces any)
 const REDACTIONS = [];
-let sanitized = content.toString('utf8');
+let sanitized = JSON.stringify(spec);
 const redactionCounts = {};
 for (const r of REDACTIONS) {
   const matches = sanitized.match(r.re);
@@ -104,6 +135,7 @@ pin.specs[specFile.replace(/\.json$/, '')] = {
   operations: opCount,
   sha256,
   sanitized_sha256: sanitizedSha256,
+  fixes,
   redactions: redactionCounts,
   bytes: content.length,
   fetched: new Date().toISOString().slice(0, 10)

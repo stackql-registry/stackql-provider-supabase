@@ -1,0 +1,21 @@
+{
+  "specs": {
+    "supabase-v1": {
+      "url": "https://api.supabase.com/api/v1-json",
+      "filename": "supabase-v1.json",
+      "spec_version": "1.0.0",
+      "openapi": "3.0.0",
+      "paths": 114,
+      "operations": 169,
+      "sha256": "a7cb39418064a10883be5a73e8fa24c0e788e91565d4b168f1abbe8d6fb73d26",
+      "sanitized_sha256": "7cd620fe9c3a0d86c59cf4cabcd28a85f72e58a4ecc07ad59f4c38e0f9fb55ab",
+      "fixes": {
+        "type_null_to_nullable": 3,
+        "hide_definitions_removed": 1
+      },
+      "redactions": {},
+      "bytes": 307458,
+      "fetched": "2026-07-14"
+    }
+  }
+}

@@ -36,6 +36,8 @@ npm run fetch-spec -- --update  # accept an upstream change (reviewed refresh)
 
 Validates with `@apidevtools/swagger-parser` and fails without writing on validation errors or a pin mismatch.
 
+Pinned snapshot (2026-07-14): `Supabase API (v1)`, OpenAPI 3.0.0, stated version 1.0.0, 114 paths, 169 operations, upstream sha256 `a7cb394180...`. Two deterministic fixes are applied before validation and recorded in the pin: 3 `"type": "null"` schemas rewritten to `nullable: true` (JSON Schema 2020-12 syntax the NestJS generator leaks into an OpenAPI 3.0 document) and 1 `hideDefinitions` artifact key removed.
+
 ## 1. Endpoint Inventory and Service Split
 
 ```bash
