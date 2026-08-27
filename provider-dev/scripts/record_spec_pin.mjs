@@ -45,13 +45,28 @@ const spec = JSON.parse(content.toString('utf8'));
 
 // Deterministic fixes for the NestJS generator's OpenAPI 3.0 violations
 // (hetzner precedent: fix deterministically before validating, record the
-// counts in the pin). Two defect classes in the current spec:
+// counts in the pin). Four defect classes seen so far; a class that is
+// absent from a given snapshot simply counts 0 in the pin:
 //   type_null_to_nullable - `"type": "null"` is JSON Schema 2020-12, not
 //     OpenAPI 3.0; rewritten to `nullable: true` with no type (the always-
-//     null discriminant properties in the JIT access oneOf variants)
+//     null discriminant properties in the JIT access oneOf variants, and the
+//     deprecated always-null create-project body fields)
 //   hide_definitions_removed - `hideDefinitions` is a @nestjs/swagger
-//     artifact key, not an OpenAPI schema keyword (V1CreateProjectBody)
-const fixes = { type_null_to_nullable: 0, hide_definitions_removed: 0 };
+//     artifact key, not an OpenAPI schema keyword
+//   property_names_removed - `propertyNames` is a JSON Schema 2019-09
+//     keyword that OpenAPI 3.0 does not allow (the api-keys
+//     `secret_jwt_template` free-form object, 2026-08 refresh); dropped -
+//     the constraint (string keys) is implied by JSON anyway
+//   exclusive_bound_lowered - numeric `exclusiveMinimum` / `exclusiveMaximum`
+//     (JSON Schema 2020-12 form) rewritten to the OpenAPI 3.0 form,
+//     `minimum`/`maximum` plus the boolean flag (DiskAutoscaleConfig,
+//     2026-08 refresh; the clickhouse pre_normalize precedent)
+//   schema_dialect_key_removed - a literal `$schema` key naming the
+//     2020-12 dialect inside a response schema (the jit-access oneOf,
+//     2026-08 refresh); not an OpenAPI 3.0 keyword, dropped
+//   const_to_enum - `const: x` (2019-09) rewritten to `enum: [x]`, the
+//     3.0 equivalent (the jit-access "unavailable" discriminant)
+const fixes = { type_null_to_nullable: 0, hide_definitions_removed: 0, property_names_removed: 0, exclusive_bound_lowered: 0, schema_dialect_key_removed: 0, const_to_enum: 0 };
 function applyFixes(node) {
   if (Array.isArray(node)) { node.forEach(applyFixes); return; }
   if (node && typeof node === 'object') {
@@ -63,6 +78,26 @@ function applyFixes(node) {
     if ('hideDefinitions' in node) {
       delete node.hideDefinitions;
       fixes.hide_definitions_removed++;
+    }
+    if ('propertyNames' in node) {
+      delete node.propertyNames;
+      fixes.property_names_removed++;
+    }
+    if (typeof node.$schema === 'string') {
+      delete node.$schema;
+      fixes.schema_dialect_key_removed++;
+    }
+    if ('const' in node) {
+      node.enum = [node.const];
+      delete node.const;
+      fixes.const_to_enum++;
+    }
+    for (const [excl, bound] of [['exclusiveMinimum', 'minimum'], ['exclusiveMaximum', 'maximum']]) {
+      if (typeof node[excl] === 'number') {
+        node[bound] = node[excl];
+        node[excl] = true;
+        fixes.exclusive_bound_lowered++;
+      }
     }
     for (const v of Object.values(node)) applyFixes(v);
   }

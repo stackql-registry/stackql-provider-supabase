@@ -5,6 +5,7 @@ stackql-zip
 stackql-server.log
 nohup.out
 *.log
+/.stackql
 
 # node
 node_modules/
@@ -40,3 +41,7 @@ website/.shared-config/
 # (https://api.supabase.com/api/v1-json) and the vendor ships fast, so
 # committing the snapshot makes every refresh a reviewable diff against the
 # hash pin in provider-dev/config/spec_pin.json.
+
+# integration test registry copy (rebuilt every run)
+tests/integration/.registry-tmp/
+/.stackql

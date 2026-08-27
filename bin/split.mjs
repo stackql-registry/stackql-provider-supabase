@@ -12,6 +12,16 @@
 // split into a temp dir and the requested service specs are copied into
 // --output-dir (all services by default, or a --services subset).
 //
+// After the split every service spec is rebased onto the project-scoped
+// server template in provider-dev/config/servers.json
+// (https://api.supabase.com/v1/projects/{ref}, the {ref} server variable
+// carrying x-stackQL-envVar: SUPABASE_PROJECT_ID so stackql resolves it from
+// the environment - the clickhouse organization precedent). Project-scoped
+// paths lose the /v1/projects/{ref} prefix and the ref path parameter; every
+// other path keeps its full path and is pinned back to the bare API base by a
+// path-level servers override, injected by provider-dev/scripts/post_process.mjs
+// after generation (the normalize step strips path-level servers).
+//
 // Usage:
 //   node bin/split.mjs --provider-name supabase \
 //     [--api-doc provider-dev/downloaded/supabase-v1.json] \
@@ -22,8 +32,9 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import yaml from 'js-yaml';
 import { providerdev } from '@stackql/provider-utils';
-import { makeServiceResolver } from '../provider-dev/scripts/lib/spec_helpers.mjs';
+import { makeServiceResolver, excludedServices, REF_PREFIX, rebaseRefScopedPaths } from '../provider-dev/scripts/lib/spec_helpers.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -45,6 +56,9 @@ if (!fs.existsSync(apiDoc)) {
   process.exit(1);
 }
 const resolveService = makeServiceResolver();
+const excluded = excludedServices();
+const serversPath = path.join(repoRoot, 'provider-dev', 'config', 'servers.json');
+const servers = JSON.parse(fs.readFileSync(serversPath, 'utf8'));
 
 // Prepare the output directory, preserving non-spec files (e.g. .gitkeep)
 fs.mkdirSync(outputDir, { recursive: true });
@@ -66,6 +80,7 @@ const svcDiscriminatorFn = (pathKey) => {
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'stackql-split-'));
 const written = [];
+const skipped = [];
 try {
   const result = await providerdev.split({
     apiDoc,
@@ -94,8 +109,11 @@ try {
   for (const outFile of fs.readdirSync(tmpDir)) {
     const service = outFile.replace(/\.(yaml|yml|json)$/, '');
     if (servicesFilter && !servicesFilter.includes(service)) continue;
-    fs.copyFileSync(path.join(tmpDir, outFile), path.join(outputDir, outFile));
-    written.push(outFile);
+    if (excluded.has(service)) { skipped.push(service); continue; }
+    const doc = yaml.load(fs.readFileSync(path.join(tmpDir, outFile), 'utf8'));
+    const { rebased, kept } = rebaseRefScopedPaths(doc, servers);
+    fs.writeFileSync(path.join(outputDir, outFile), yaml.dump(doc, { lineWidth: -1, noRefs: true }));
+    written.push(`${outFile} (${rebased} paths rebased under ${REF_PREFIX}${kept ? `, ${kept} root paths kept` : ''})`);
   }
 } finally {
   fs.rmSync(tmpDir, { recursive: true, force: true });
@@ -105,3 +123,5 @@ console.log(`Split completed: ${written.length} service specs written to ${outpu
 for (const f of written.sort()) {
   console.log(`  ${f}`);
 }
+if (skipped.length) console.log(`Excluded (every operation skip-coded, no service emitted): ${skipped.join(', ')}`);
+console.log(`Server template: ${servers[0].url} (ref via x-stackQL-envVar ${servers[0].variables.ref['x-stackQL-envVar']}; non-project paths pinned to the API base in post_process)`);

@@ -90,7 +90,42 @@ const RESOURCE_RULES = [
   { service: 'projects', re: /\/config\/disk\/autoscale$/, resource: 'disk_autoscale_configs' },
   { service: 'projects', re: /^\/v1\/organizations\/\{\}\/projects$/, resource: 'organization_projects' },
   // --- secrets
-  { service: 'secrets', re: /\/api-keys\/legacy$/, resource: 'legacy_api_keys' }
+  { service: 'secrets', re: /\/api-keys\/legacy$/, resource: 'legacy_api_keys' },
+  // --- branches: the branch-by-id read returns the branch's database
+  // connection details (BranchDetailResponse), a different shape from the
+  // project-scoped list/get (BranchResponse); it gets its own resource so
+  // each resource projects one shape. The vendor's operationId is
+  // v1-get-a-branch-config.
+  { service: 'branches', verb: 'get', re: /^\/v1\/branches\/\{\}$/, resource: 'branch_configs' },
+  { service: 'branches', re: /\/actions(\/|$)/, resource: 'action_runs' },
+  // --- database
+  { service: 'database', re: /\/database\/query(\/read-only)?$/, resource: 'queries' },
+  { service: 'database', re: /\/database\/password$/, resource: 'databases' },
+  { service: 'database', re: /\/database\/context$/, resource: 'databases' },
+  { service: 'database', re: /\/database\/backups\/restore-point$/, resource: 'restore_points' },
+  { service: 'database', re: /\/database\/backups\/schedule$/, resource: 'backup_schedules' },
+  { service: 'database', verb: 'get', re: /\/database\/jit$/, resource: 'jit_role_mappings' },
+  { service: 'database', re: /\/database\/jit(\/list|\/\{\})?$/, resource: 'jit_access' },
+  { service: 'database', re: /\/database\/jit\/invite/, resource: 'jit_invites' },
+  { service: 'database', re: /\/jit-access$/, resource: 'jit_access_configs' },
+  { service: 'database', re: /\/readonly(\/temporary-disable)?$/, resource: 'readonly_mode' },
+  { service: 'database', re: /\/types\/typescript$/, resource: 'typescript_types' },
+  { service: 'database', re: /\/database\/webhooks\/enable$/, resource: 'webhooks' },
+  // --- functions: the CLAUDE.md naming (supabase.functions.edge_functions)
+  { service: 'functions', re: /\/functions(\/|$)/, resource: 'edge_functions' },
+  // --- network: both POST-backed ban reads are the network_bans resource
+  { service: 'network', re: /\/network-bans(\/|$)/, resource: 'network_bans' },
+  // --- analytics: one resource per endpoint, named for what it returns
+  { service: 'analytics', re: /\/endpoints\/logs\.all$/, resource: 'all_logs' },
+  { service: 'analytics', re: /\/endpoints\/logs$/, resource: 'logs' },
+  { service: 'analytics', re: /\/endpoints\/usage\.api-counts$/, resource: 'api_counts' },
+  { service: 'analytics', re: /\/endpoints\/usage\.api-requests-count$/, resource: 'api_request_counts' },
+  { service: 'analytics', re: /\/endpoints\/functions\.combined-stats$/, resource: 'function_stats' },
+  // --- advisors: the lint rows are the resource
+  { service: 'advisors', re: /\/advisors\/performance$/, resource: 'performance_lints' },
+  { service: 'advisors', re: /\/advisors\/security$/, resource: 'security_lints' },
+  // --- organizations
+  { service: 'organizations', re: /\/project-claim\/\{\}$/, resource: 'project_claims' }
 ];
 
 // Method-name / verb / objectKey overrides for cases the generic rules
@@ -107,7 +142,42 @@ const METHOD_RULES = [
   { verb: 'post', re: /\/config\/disk$/, method: 'modify', sqlVerb: 'exec', objectKey: '' },
   // restore/cancel is a projects lifecycle command; the mechanical name
   // would collide with a restores resource
-  { verb: 'post', re: /\/restore\/cancel$/, method: 'cancel_restore', sqlVerb: 'exec', objectKey: '' }
+  { verb: 'post', re: /\/restore\/cancel$/, method: 'cancel_restore', sqlVerb: 'exec', objectKey: '' },
+  // --- branches: DELETE /projects/{ref}/branches disables preview branching
+  // for the project (an action, not a row delete); the branch-by-id DELETE is
+  // the row delete
+  { verb: 'delete', re: /^\/branches$/, method: 'disable_branching', sqlVerb: 'exec', objectKey: '' },
+  // --- database
+  // snippets list is a {data, cursor} envelope (cursor pagination is
+  // configured in post_process)
+  { verb: 'get', re: /^\/v1\/snippets$/, method: 'list', sqlVerb: 'select', objectKey: '$.data' },
+  // migrations: PUT is an upsert (apply-or-record), distinct from the PATCH
+  // edit of a recorded version
+  { verb: 'put', re: /\/database\/migrations$/, method: 'upsert', sqlVerb: 'exec', objectKey: '' },
+  // the flagship: POST database/query maps as INSERT (queries.run) so that
+  // INSERT ... RETURNING flows the result rows (snowflake SubmitStatement
+  // framework, projection evidence in NOTES.md finding 1); the read-only
+  // sibling is EXEC-only - the main method takes read_only in its body
+  { verb: 'post', re: /\/database\/query$/, method: 'run', sqlVerb: 'insert', objectKey: '' },
+  { verb: 'post', re: /\/database\/query\/read-only$/, method: 'run_read_only', sqlVerb: 'exec', objectKey: '' },
+  // database metadata (deprecated) is the databases list
+  { verb: 'get', re: /\/database\/context$/, method: 'list', sqlVerb: 'select', objectKey: '$.databases' },
+  // backups: the envelope's backups array is the row source
+  { verb: 'get', re: /\/database\/backups$/, method: 'list', sqlVerb: 'select', objectKey: '$.backups' },
+  // JIT access: the list envelope
+  { verb: 'get', re: /\/database\/jit\/list$/, method: 'list', sqlVerb: 'select', objectKey: '$.items' },
+  // --- functions: PUT /functions is a bulk update taking a bare array body
+  { verb: 'put', re: /^\/functions$/, method: 'bulk_update', sqlVerb: 'exec', objectKey: '' },
+  // --- network bans: the enriched POST read is the list (object rows); the
+  // plain POST read (string rows) stays available as EXEC
+  { verb: 'post', re: /\/network-bans\/retrieve\/enriched$/, method: 'list', sqlVerb: 'select', objectKey: '$.banned_ipv4_addresses' },
+  { verb: 'post', re: /\/network-bans\/retrieve$/, method: 'retrieve', sqlVerb: 'exec', objectKey: '' },
+  // --- advisors: the lints array is the row source
+  { verb: 'get', re: /\/advisors\/(performance|security)$/, method: 'list', sqlVerb: 'select', objectKey: '$.lints' },
+  // --- billing: the project's applied add-ons are the rows
+  { verb: 'get', re: /\/billing\/addons$/, method: 'list', sqlVerb: 'select', objectKey: '$.selected_addons' },
+  // --- organizations: claiming a project is an action on the claim
+  { verb: 'post', re: /\/project-claim\/\{\}$/, method: 'claim', sqlVerb: 'exec', objectKey: '' }
 ];
 
 function normalizePath(pathKey) {
@@ -301,6 +371,12 @@ for (const row of rows.slice(1)) {
   sigSeen.set(sigKey, row[col.stackql_method_name]);
 }
 
+if (process.argv.includes('--report')) {
+  // diagnostic listing of the derived mapping per operation (no write)
+  for (const row of rows.slice(1)) {
+    console.log(`${row[col.filename].replace(/.yaml$/, '').padEnd(14)} ${row[col.verb].padEnd(6)} ${row[col.path].padEnd(62)} -> ${row[col.stackql_resource_name]}.${row[col.stackql_method_name]} [${row[col.stackql_verb]}] ${row[col.stackql_object_key]}`);
+  }
+}
 if (errors.length > 0) {
   console.error(`FAILED with ${errors.length} error(s), nothing written:`);
   for (const e of errors) console.error(`  ${e}`);

@@ -59,7 +59,7 @@ fi
 
 # If registry path not specified, use current directory
 if [ -z "$REG_PATH" ]; then
-  REG_PATH="$BASE_DIR/provider-dev/openapi/src"
+  REG_PATH="$BASE_DIR/provider-dev/openapi"
 fi
 
 echo "Using provider: $PROVIDER"
@@ -67,8 +67,17 @@ echo "Registry path: $REG_PATH"
 echo "Port: $PORT"
 echo "Verify signatures: $VERIFY"
 
-# Check if stackql binary exists
-if [ ! -f "$BASE_DIR/stackql" ]; then
+# Binary resolution: $STACKQL, ./stackql, then `stackql` on PATH (the test
+# runners resolve the same way); download into the repo only as a last resort.
+STACKQL_BIN=""
+if [ -n "${STACKQL:-}" ] && [ -x "$STACKQL" ]; then
+  STACKQL_BIN="$STACKQL"
+elif [ -x "$BASE_DIR/stackql" ]; then
+  STACKQL_BIN="$BASE_DIR/stackql"
+elif command -v stackql >/dev/null 2>&1; then
+  STACKQL_BIN="$(command -v stackql)"
+fi
+if [ -z "$STACKQL_BIN" ]; then
   echo "StackQL binary not found. Downloading..."
   
   # Determine OS and architecture
@@ -99,8 +108,10 @@ if [ ! -f "$BASE_DIR/stackql" ]; then
   unzip -o stackql.zip
   rm stackql.zip
   chmod +x stackql
+  STACKQL_BIN="$BASE_DIR/stackql"
   echo "StackQL binary downloaded successfully"
 fi
+echo "Using stackql: $STACKQL_BIN ($("$STACKQL_BIN" --version 2>/dev/null | head -1))"
 
 # Set registry configuration
 if [ "$VERIFY" = "true" ]; then
@@ -118,7 +129,7 @@ fi
 # Start the server
 echo "Starting StackQL server with registry: $REG"
 cd "$BASE_DIR"
-nohup ./stackql --registry="${REG}" --pgsrv.port="${PORT}" srv > stackql-server.log 2>&1 &
+nohup "$STACKQL_BIN" --registry="${REG}" --pgsrv.port="${PORT}" srv > stackql-server.log 2>&1 &
 SERVER_PID=$!
 
 # Check if server started successfully

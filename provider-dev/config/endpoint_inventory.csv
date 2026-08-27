@@ -104,6 +104,7 @@ get,/v1/projects/{ref}/analytics/endpoints/logs,v1-get-project-logs,Analytics,re
 get,/v1/projects/{ref}/analytics/endpoints/usage.api-counts,v1-get-project-usage-api-count,Analytics,ref,ref,,n,,,,,,object,result,,analytics,endpoints_usage_api_counts,select,
 get,/v1/projects/{ref}/analytics/endpoints/usage.api-requests-count,v1-get-project-usage-request-count,Analytics,ref,ref,,n,,,,,,object,result,,analytics,endpoints_usage_api_requests_counts,select,
 get,/v1/projects/{ref}/analytics/endpoints/functions.combined-stats,v1-get-project-function-combined-stats,Analytics,ref,ref,,n,,,,,,object,result,,analytics,endpoints_functions_combined_stats,select,
+get,/v1/projects/{ref}/analytics/endpoints/metrics,v1-scrape-project-metrics,Analytics,ref,ref,,n,,,,,,non-json,,text/plain;application/openmetrics-text,analytics,,,non_json_text_response
 post,/v1/projects/{ref}/cli/login-role,v1-create-login-role,Database,ref,ref,,y,application/json,,,beta,,object,,,database,cli_login_roles,insert,
 delete,/v1/projects/{ref}/cli/login-role,v1-delete-login-roles,Database,ref,ref,,n,,,,beta,,object,,,database,cli_login_roles,delete,
 get,/v1/projects/{ref}/database/migrations,v1-list-migration-history,Database,ref,ref,,n,,,,,,bare-array,,,database,migrations,select,
@@ -125,10 +126,10 @@ post,/v1/projects/{ref}/database/jit/invite,v1-invite-external-jit-access,Databa
 post,/v1/projects/{ref}/database/jit/invite/accept,v1-accept-invite-external-jit-access,Database,ref,ref,,y,application/json,,,,,object,user_roles,,database,jit_invites,exec,
 delete,/v1/projects/{ref}/database/jit/invite/{invite_id},v1-delete-invite-external-jit-access,Database,ref,ref;invite_id,,n,,,,,,none,,,database,jit_invites,delete,
 delete,/v1/projects/{ref}/database/jit/{user_id},v1-delete-jit-access,Database,ref,ref;user_id,,n,,,,,,none,,,database,jits,delete,
-get,/v1/projects/{ref}/database/openapi,v1-get-database-openapi,Database,ref,ref,,n,,,,,,untyped-json,,,database,openapis,select,
+get,/v1/projects/{ref}/database/openapi,v1-get-database-openapi,Database,ref,ref,,n,,,,,,untyped-json,,,database,,,untyped_json_response
 get,/v1/projects/{ref}/functions,v1-list-all-functions,Edge Functions,ref,ref,,n,,,,,,bare-array,,,functions,functions,select,
 post,/v1/projects/{ref}/functions,v1-create-a-function,Edge Functions,ref,ref,,y,application/vnd.denoland.eszip;application/json,,,,y,object,,,functions,functions,insert,
-put,/v1/projects/{ref}/functions,v1-bulk-update-functions,Edge Functions,ref,ref,,y,application/json,y,put-replace-unverified,,,object,functions,,functions,functions,update,
+put,/v1/projects/{ref}/functions,v1-bulk-update-functions,Edge Functions,ref,ref,,y,application/json,y,put-replace-unverified,,,object,functions,,functions,,,bare_array_bulk_body
 post,/v1/projects/{ref}/functions/deploy,v1-deploy-a-function,Edge Functions,ref,ref,,y,multipart/form-data,,,,,object,,,functions,,,multipart_eszip_deploy
 get,/v1/projects/{ref}/functions/{function_slug},v1-get-a-function,Edge Functions,ref,ref;function_slug,,n,,,,,,object,,,functions,functions,select,
 patch,/v1/projects/{ref}/functions/{function_slug},v1-update-a-function,Edge Functions,ref,ref;function_slug,,y,application/vnd.denoland.eszip;application/json,,patch-partial-presumed,,,object,,,functions,functions,update,

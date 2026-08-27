@@ -5,17 +5,21 @@
       "filename": "supabase-v1.json",
       "spec_version": "1.0.0",
       "openapi": "3.0.0",
-      "paths": 114,
-      "operations": 169,
-      "sha256": "a7cb39418064a10883be5a73e8fa24c0e788e91565d4b168f1abbe8d6fb73d26",
-      "sanitized_sha256": "7cd620fe9c3a0d86c59cf4cabcd28a85f72e58a4ecc07ad59f4c38e0f9fb55ab",
+      "paths": 115,
+      "operations": 170,
+      "sha256": "660e5634fab8f9bf906f816f29fe3cee6827a1d373cfdd4ead0c57f63ed4627e",
+      "sanitized_sha256": "2840ef6c90422e1567de6a9a5034c04c6516e10c1c1cbf99ad849ee1ca5e5e33",
       "fixes": {
-        "type_null_to_nullable": 3,
-        "hide_definitions_removed": 1
+        "type_null_to_nullable": 5,
+        "hide_definitions_removed": 0,
+        "property_names_removed": 3,
+        "exclusive_bound_lowered": 3,
+        "schema_dialect_key_removed": 2,
+        "const_to_enum": 2
       },
       "redactions": {},
-      "bytes": 307458,
-      "fetched": "2026-07-14"
+      "bytes": 335177,
+      "fetched": "2026-08-27"
     }
   }
 }

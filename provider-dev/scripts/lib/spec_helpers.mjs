@@ -63,6 +63,15 @@ export function makeServiceResolver() {
   };
 }
 
+// Services whose rules carry "excluded": true are classified (so the
+// inventory records their operations, reason-coded) but never emitted as
+// service specs - every operation in them is skip-coded and an empty service
+// would fail the meta-route walk.
+export function excludedServices() {
+  const config = JSON.parse(fs.readFileSync(serviceNamesPath, 'utf8'));
+  return new Set(config.rules.filter((r) => r.excluded).map((r) => r.service));
+}
+
 export function success2xx(op) {
   const codes = Object.keys(op.responses || {}).filter((c) => /^2/.test(c)).sort();
   for (const code of codes) {
@@ -195,7 +204,10 @@ export function scopedSegments(pathKey) {
 }
 
 export function deriveResource(pathKey, verb, service, pluralizeFn) {
-  const { segs, parent } = scopedSegments(pathKey);
+  const { segs, parent: scopedParent } = scopedSegments(pathKey);
+  // a rebased project-scoped path (/pause, /restore, ...) has no visible
+  // scoping pair; its parent is the project the server template addresses
+  const parent = scopedParent || (!pathKey.startsWith('/v1/') ? 'projects' : null);
   let statics = segs.filter((s) => !s.startsWith('{'));
   const last = statics[statics.length - 1];
   // an action segment names a method on the scoping parent, not a resource
@@ -239,14 +251,72 @@ export function deriveVerb(verb, pathKey) {
 //     object; no projectable columns (source retrieval is a CLI concern)
 //   head_count_endpoint - HEAD has no StackQL verb; the action-run count
 //     is derivable from the list read
-//   non_json_text_response - the branch diff and action-run log reads
-//     return text/plain (standing non-JSON exclusion)
+//   non_json_text_response - the branch diff, action-run log and Prometheus
+//     metrics reads return text (standing non-JSON exclusion)
+//   bare_array_bulk_body - the edge function bulk update (PUT /functions)
+//     takes a bare array of function objects; there is no per-statement
+//     surface for it (the single-function PATCH is the update path), unlike
+//     the secrets bulk endpoints whose one-item bodies are wrapped by a
+//     request transform
+//   untyped_json_response - the project's PostgREST OpenAPI document read
+//     (database/openapi) declares an empty JSON schema; it would project no
+//     columns and its value in SQL is marginal (NOTES.md finding 10)
 export function skipReason(pathKey, op, resolve, verb) {
   if (verb === 'head') return 'head_count_endpoint';
   if (/\/functions\/deploy$/.test(pathKey)) return 'multipart_eszip_deploy';
+  if (verb === 'put' && /\/functions$/.test(pathKey)) return 'bare_array_bulk_body';
+  if (verb === 'get' && /\/database\/openapi$/.test(pathKey)) return 'untyped_json_response';
   if (/^\/v1\/oauth\//.test(pathKey)) return 'oauth_user_agent_flow';
   if (/\/functions\/\{[^}]+\}\/body$/.test(pathKey)) return 'untyped_function_body';
   const { schema, mediaTypes } = success2xx(op);
   if (!schema && mediaTypes.length > 0 && !mediaTypes.some((m) => m.includes('json'))) return 'non_json_text_response';
   return '';
+}
+
+// ---------------------------------------------------------------------------
+// Project-scoped server rebase (bin/split.mjs, post_process.mjs)
+// ---------------------------------------------------------------------------
+
+// 141 of the 170 operations live under /v1/projects/{ref}/... . The split
+// rebases those paths onto the project-scoped server template in
+// provider-dev/config/servers.json (https://api.supabase.com/v1/projects/{ref},
+// the {ref} server variable carrying x-stackQL-envVar: SUPABASE_PROJECT_ID so
+// stackql resolves it from the environment - the clickhouse organization
+// precedent, stackql/stackql#707). Every other path (the projects root and
+// create, available regions, the organization surface, branch-by-id, snippets,
+// profile, oauth, and /v1/projects/{ref} itself) keeps its full path and is
+// pinned back to the bare API base by a path-level servers override injected
+// after generation by post_process.mjs (normalize strips path-level servers).
+export const REF_PREFIX = '/v1/projects/{ref}';
+export const API_BASE_URL = 'https://api.supabase.com';
+
+export function isRefScoped(pathKey) {
+  return pathKey.startsWith(REF_PREFIX + '/');
+}
+
+// Rewrites a split service document in place: sets the project-scoped
+// servers, strips the ref prefix from every project-scoped path and drops the
+// ref path parameter (it is the server variable now). Returns the counts.
+export function rebaseRefScopedPaths(doc, servers) {
+  const newPaths = {};
+  let rebased = 0, kept = 0;
+  for (const [pathKey, pathItem] of Object.entries(doc.paths || {})) {
+    if (!isRefScoped(pathKey)) {
+      newPaths[pathKey] = pathItem;
+      kept++;
+      continue;
+    }
+    const shortPath = pathKey.slice(REF_PREFIX.length);
+    if (shortPath in newPaths) throw new Error(`rebase collision: ${pathKey} -> ${shortPath}`);
+    const dropRef = (params) => (params || []).filter((p) => !(p && p.in === 'path' && p.name === 'ref'));
+    if (pathItem.parameters) pathItem.parameters = dropRef(pathItem.parameters);
+    for (const verb of HTTP_VERBS) {
+      if (pathItem[verb]?.parameters) pathItem[verb].parameters = dropRef(pathItem[verb].parameters);
+    }
+    newPaths[shortPath] = pathItem;
+    rebased++;
+  }
+  doc.paths = newPaths;
+  doc.servers = JSON.parse(JSON.stringify(servers));
+  return { rebased, kept };
 }

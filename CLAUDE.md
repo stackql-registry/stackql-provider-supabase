@@ -2,150 +2,88 @@
 
 ## Project
 
-This repository builds and documents the `supabase` provider for [StackQL](https://github.com/stackql/stackql), enabling SQL-based query and provisioning operations against the Supabase Management API - organizations, projects, branches, edge functions, secrets, project configuration (auth/GoTrue settings, Postgres settings, pooler, API/PostgREST settings, storage config), custom domains and vanity subdomains, network restrictions and bans, SSL enforcement, backups and restore points, read replicas, and the project SQL query endpoint.
+This repository builds and documents the `supabase` provider for [StackQL](https://github.com/stackql/stackql), enabling SQL-based query and provisioning operations against the Supabase Management API - organizations and members, projects, preview branches, edge functions, secrets and API keys, project configuration (auth/GoTrue settings, Postgres settings, pooler, API/PostgREST settings, storage, realtime, SSL enforcement), custom domains and vanity subdomains, network restrictions and bans, backups and restore points, read replicas, add-ons, advisors, analytics, and the project SQL query endpoint.
 
 **Scope notes, recorded so they are never relitigated**: the per-project data APIs (PostgREST at `<ref>.supabase.co/rest/v1`, Realtime, Storage object I/O, GoTrue user-facing auth) are per-project hosts with per-project keys - a different surface, reserved as a possible future `supabase_project` sibling, out of scope here. The Management API is the provider.
 
-The provider is built using the `@stackql/provider-utils` package and follows the repository pattern established in [`stackql-registry/stackql-provider-k8s`](https://github.com/stackql-registry/stackql-provider-k8s/tree/feature/provider-dev) (branch `feature/provider-dev`). Sibling-build NOTES.md findings are reused, not re-derived - hetzner/clickhouse (the lean fixed-host mould, and the rate-limit-as-design-input posture), snowflake (the statement-endpoint mapping decision framework), clickhouse (billable/heavyweight smoke gating).
+The provider is a type 1 (DIRECT) build from the vendor's published OpenAPI document using `@stackql/provider-utils`, in the lean fixed-host mould of the clickhouse/hetzner sibling repos (the reference implementation for structure, scripts, tests and docs is [`stackql-provider-clickhouse`](../../C/stackql-provider-clickhouse)). Sibling-build NOTES.md findings are reused, not re-derived - snowflake (the statement-endpoint mapping framework), clickhouse (rate limit as a design input, the org-scoped server template, gated smoke lifecycles), keycloak (PUT is not REPLACE without evidence), newrelic (the JSON-blob posture for query-dependent shapes), hetzner (deterministic spec fixes counted in the pin). Supabase-specific findings live in [NOTES.md](NOTES.md) - read it before changing a mapping.
 
 ## Positioning context
 
-Supabase's official Terraform provider is self-labelled experimental, with community-documented coverage gaps (auth configuration, storage, much of the project surface). The citation is the vendor's own label - state it once, factually. This provider's counter is mechanical completeness from the vendor's published spec, and one capability the resource model does not attempt: the project SQL query endpoint surfaced in-session, so the control plane (projects, config, secrets) and the project database itself are queryable in one place - the snowflake/clickhouse control-plane-plus-data-plane story applied to Postgres. The audience is the largest of the current batch (the AI-builder community). Comparisons are expressed through capability statements and runnable examples, never editorializing.
+Supabase's official Terraform provider is labelled Public Alpha by the vendor (the "experimental" wording in earlier drafts was wrong - NOTES.md finding 17) and covers seven resources. State the label once, factually. This provider's counter is mechanical completeness from the vendor's published spec (158 operations, 14 services, 65 resources) and one capability the resource model does not attempt: the project SQL query endpoint surfaced in-session, so the control plane and the project database are queryable in one place. Comparisons are expressed through capability statements and runnable examples, never editorializing.
 
 ## Spec source
 
-The Management API serves its own OpenAPI document (NestJS-generated) - `https://api.supabase.com/api/v1-json` (verify the canonical path in phase 1 from the API reference, which is generated from it). `bin/fetch-spec.sh` downloads, validates with `@apidevtools/swagger-parser`, and pins (URL, date, hash) in `provider-dev/config/spec_pin.json`. Supabase ships fast - the drift CI job runs weekly, and refreshes are reviewed diffs, never silent regenerations. Beta-flagged endpoints (the SQL query endpoint among them) are mapped and labelled per the clickhouse beta convention.
+The Management API serves its own OpenAPI document (NestJS-generated) at `https://api.supabase.com/api/v1-json`. `bin/fetch-spec.sh` downloads, applies the deterministic fixes in `provider-dev/scripts/record_spec_pin.mjs` (six defect classes so far, counted in the pin), validates with `@apidevtools/swagger-parser`, and pins (URL, date, hash) in `provider-dev/config/spec_pin.json`. The snapshot in `provider-dev/downloaded/` is committed. Supabase ships fast - the weekly drift job opens an issue, and refreshes are reviewed diffs (`make refresh-spec`), never silent regenerations. A refresh that introduces a new 2019-09/2020-12 JSON Schema construct needs a new fix class in `record_spec_pin.mjs`, not a hand edit.
 
-## Design principles
+## Design decisions (settled - see NOTES.md for the evidence)
 
-- **Fixed server, PAT bearer auth** - `https://api.supabase.com`; `Authorization: Bearer` with a personal access token, env var `SUPABASE_ACCESS_TOKEN` (the CLI's convention - keep it). No server variables, no dotted-host concern.
-- **Rate limit as a design input** - the Management API allows 60 requests per minute per token. The clickhouse precedent applies verbatim: harness pacing is a correctness concern, a 429 in CI is a harness bug, and the docs note the limit's implication for wide queries.
-- **`ref`-scoped everything** - projects are addressed by reference ID (`/v1/projects/{ref}/...`); `ref` is the universal scoping parameter, `projects.list` the enumeration join pattern, taught once. Organization resources scope by `slug`.
-- **The SQL query endpoint is the flagship** - `POST /v1/projects/{ref}/database/query` executes SQL against the project's Postgres and returns rows. The snowflake SubmitStatement decision framework governs the mapping (`EXEC` with `@query` vs `INSERT ... RETURNING`), decided in phase 1 on projection-quality evidence and applied once. Result rows are query-dependent - the JSON-blob projection is documented plainly per the newrelic NRQL precedent. Doc examples are read-shaped (`select ...`); the endpoint runs arbitrary SQL and the docs say so with appropriate caution.
-- **Config-as-rows is the audit surface** - auth/GoTrue settings (signups enabled, MFA, password policy, OTP expiry), Postgres settings, SSL enforcement, and network restrictions per project are the posture queries that lead the docs: which projects allow signups, which lack SSL enforcement, which have `0.0.0.0/0` network access.
-- **Edge functions map metadata-first** - function CRUD and secrets map; the deploy endpoint takes a function bundle (multipart/eszip) and is skipped per the standing binary exclusions, with the CLI noted as the deploy path. Function config updates map normally.
-- **Update semantics per resource** - the API mixes PATCH and PUT; label `UPDATE` vs `REPLACE` honestly per the keycloak warning, confirmed per resource.
-- **Pagination is an inventory confirmation** - most collections are bounded (projects per org); confirm per endpoint and record rather than assume.
+- **Bearer auth from `SUPABASE_ACCESS_TOKEN`** - the CLI's and the Terraform provider's variable. Fixed API base `https://api.supabase.com`.
+- **Project scope is a server variable** - the split rebases the 141 operations under `/v1/projects/{ref}/` onto `https://api.supabase.com/v1/projects/{ref}` with `x-stackQL-envVar: SUPABASE_PROJECT_ID` (`provider-dev/config/servers.json`); the non-project paths keep their full path and are pinned to the API base by `post_process.mjs`. A `WHERE ref` value beats the environment. A JOIN cannot fan out over projects on `ref` - the docs teach the two-statement pattern (finding 13).
+- **The query endpoint is `database.queries.run`, INSERT ... RETURNING rows** - one row whose `rows` column carries the result set (finding 1). The read-only sibling is EXEC-only.
+- **snake_case surface** - `snake_case_aliases: true` on the provider config plus `request.nativeCasing: camel` on the three camelCase-body methods (finding 16). Everything else on the wire is already snake_case.
+- **UPDATE values are strings** in the stackql engine (finding 14); INSERT and EXEC are typed. Document it; do not work around it in the provider.
+- **Bare-array bodies** - secrets create/delete are single-item bodies wrapped by request transforms; the function bulk update is skip-coded (finding 8). DELETE bodies get naive translation in `post_process.mjs`.
+- **Rate limit as a design input** - harness pacing is 1.2 s per statement; a 429 in CI is a harness bug (finding 6).
+- **Labels** - `[Beta]`/`[Alpha]` and deprecations flow through from the vendor summaries.
+- **Skip codes** (12 operations): `oauth_user_agent_flow` (the service is excluded from the provider entirely), `non_json_text_response`, `multipart_eszip_deploy`, `untyped_function_body`, `untyped_json_response`, `bare_array_bulk_body`, `head_count_endpoint`.
 
 ## Toolchain rules
 
-- Use the **latest** `@stackql/provider-utils` (see [npm](https://www.npmjs.com/package/@stackql/provider-utils)). Check for a newer version before starting work; do not pin to an old minor.
-- Node.js >= 20. `type: module` in package.json.
-- Wrap the two CLI entry points (`provider-dev-utils.mjs`, `docgen-utils.mjs`) as npm scripts, invoked through `node` (not `.bin` shims). Pass flags with npm's `--` separator.
-- A local `stackql` binary is required for testing (`$STACKQL`, `./stackql`, or on `PATH`).
+- Use the **latest** `@stackql/provider-utils` and `@stackql/pgwire-lite` (check npm before starting work; do not pin to an old minor). Node.js >= 20, `type: module`.
+- Docusaurus 3.10.x for the microsite; `showLastUpdateTime` is flipped on in `website/docusaurus.config.js`.
+- WSL is the execution environment on this machine (GNU make, bash, a `stackql` binary on PATH, Python 3, yarn). Node steps also run from Windows.
+- The two CLI entry points (`provider-dev-utils.mjs`, `docgen-utils.mjs`) are npm scripts invoked through `node`; the Makefile is the operator surface (`make help`).
 
 ## Repository layout
 
 ```
+Makefile               # the pipeline: make all / make test / make smoke ...
+bin/                   # fetch-spec.sh, split.mjs, server lifecycle, test-meta-routes.cjs
 provider-dev/
-  downloaded/          # pinned spec snapshot
-  source/              # cleaned + split per-service specs (build artifacts)
-  config/              # spec pin, service names, all_services.csv
-  openapi/src/supabase/       # generated provider output
-  scripts/             # clean_specs.mjs, map_operations.mjs, pre_normalize.mjs, post_process.mjs
-bin/                   # thin shell/node wrappers for npm scripts (mirror k8s repo)
+  downloaded/          # pinned spec snapshot (committed)
+  config/              # spec_pin.json, service_names.json, servers.json, endpoint_inventory.csv, all_services.csv
+  scripts/             # record_spec_pin, build_inventory, map_operations, pre_normalize, post_process, lib/spec_helpers
+  source/              # split + normalized per-service specs (build artifacts, committed)
+  openapi/src/supabase # generated provider output (committed)
+  docgen/provider-data # headerContent1.txt / headerContent2.txt (landing page)
 tests/
-  integration/         # mock Management API server + row-level assertions
-  fixtures/            # seed definitions for the standing dev project
-  smoke_test.py        # pystackql smoke suite
-website/               # Docusaurus 3.10 microsite
-CLAUDE.md
-README.md              # k8s-README style, steps 0-8, incl the experimental-label citation (once) and scope notes
+  offline_validation.mjs
+  integration/         # mock_supabase_server.mjs, run_integration_tests.mjs, probe.mjs
+  smoke_test.py        # pystackql live suite (--live, --read-only, --with-project-lifecycle, --cleanup-only)
+website/               # Docusaurus microsite (shared stackql/docusaurus-config vendored at build)
+.github/workflows/     # build-and-test.yml (pin check, build, drift check, 3 test layers, gated smoke, weekly spec-drift), web deploys
 ```
 
 ## Build pipeline
 
-Every step is deterministic and re-runnable. Manual mapping decisions are applied as rules in scripts, never hand-edits to CSVs or specs. Validate-and-fail-without-writing is the standard for every script.
+`make all` runs deps -> fetch-spec (pin verify) -> inventory -> split -> mappings -> pre-normalize -> normalize -> generate (+ post-process) -> test-offline -> test-integration -> test-meta -> docs -> website. Every step is deterministic and re-runnable; manual mapping decisions are rules in `map_operations.mjs` (`RESOURCE_RULES`, `METHOD_RULES`) and skip codes in `lib/spec_helpers.mjs`, never hand-edits to CSVs or specs. `all_services.csv` is committed as the durable record of every operation -> resource.method mapping; a diff there on a regeneration is a breaking-change review (a method moving resource, a resource renamed), not noise. Validate-and-fail-without-writing is the standard for every script.
 
-### 0. Fetch, pin, clean
+## Tests
 
-`bin/fetch-spec.sh` per the spec-source section. `clean_specs.mjs` validates with `@apidevtools/swagger-parser`, applies deterministic fixes with a fix report (NestJS-generated specs are generally clean; expect enum and nullable quirks), fails without writing on anything unfixable.
-
-### 1. Split into service specs
-
-`npm run split` with `--provider-name supabase`. Final service split from the endpoint inventory (recorded as ordered path rules in `provider-dev/config/service_names.json`; deviations from the original candidate list are recorded in NOTES.md finding 12):
-
-`organizations` (orgs, members, entitlements, project claims), `projects` (projects, org projects list, health, regions, upgrade, read replicas, restore, claim tokens, disk), `branches` (preview branches, action runs), `config` (auth config, signing keys, third-party auth, SSO providers, postgres config, pooler, pgbouncer, API/PostgREST settings, storage config, realtime config, SSL enforcement, pgsodium), `network` (restrictions, bans), `domains` (custom hostnames, vanity subdomains), `functions` (edge functions; function secrets do not exist as a distinct surface), `secrets` (project secrets, API keys, legacy API keys), `database` (the SQL query endpoint, migrations, backups, snippets, JIT access, readonly, typegen, webhooks, CLI login roles), `storage` (bucket admin - list only at management level), `billing` (addons), `analytics` (logs, usage counts, function stats), `advisors` (security/performance lints), `oauth` (OAuth-app user-agent flow - all skip-coded), `profile` (the PAT identity read)
-
-### 2. Generate mappings
-
-`npm run generate-mappings`, then `node provider-dev/scripts/map_operations.mjs`:
-
-| Operation pattern | StackQL verb | Resource / method |
-|---|---|---|
-| GET collection | `SELECT` | `<resource>.list` (bare arrays wrapped by normalize; envelopes per inventory) |
-| GET single | `SELECT` | `<resource>.get` |
-| POST create | `INSERT` | `<resource>.create` |
-| PATCH / PUT update (semantics per resource; keycloak warning applies) | `UPDATE` / `REPLACE` per finding | `<resource>.update` |
-| DELETE | `DELETE` | `<resource>.delete` |
-| `POST .../database/query` | per the phase 1 decision (snowflake framework) | `database.query` - the flagship |
-| lifecycle actions (pause, restore, restart services, upgrade) | `EXEC` | `<resource>.<action>` |
-| function bundle deploy (multipart/eszip) | skipped | binary, reason-coded; CLI noted as the path |
-
-Resource names are plural snake_case (`projects`, `auth_configs`, `edge_functions`, `network_restrictions`), consistent with the sibling builds. The script validates: every generator-relevant operation mapped or explicitly skipped with a reason code, method names unique per resource, overloaded SQL verbs have unique required-parameter signatures. Fail without writing on any violation.
-
-### 3. Normalize
-
-`node provider-dev/scripts/pre_normalize.mjs`, then `npm run normalize -- --api-dir provider-dev/source`. Config objects (GoTrue settings are wide and flat - good columns; Postgres settings deep) lowered per shape, `json_extract` for the deep ones.
-
-### 4. Generate the provider
-
-```bash
-rm -rf provider-dev/openapi/*
-npm run generate-provider -- \
-  --provider-name supabase \
-  --input-dir provider-dev/source \
-  --output-dir provider-dev/openapi/src/supabase \
-  --config-path provider-dev/config/all_services.csv \
-  --servers '[{"url": "https://api.supabase.com"}]' \
-  --provider-config '{"auth": {"type": "bearer", "credentialsenvvar": "SUPABASE_ACCESS_TOKEN"}}' \
-  --naive-req-body-translate \
-  --overwrite
-```
-
-Pagination config per the inventory confirmation. Then `node provider-dev/scripts/post_process.mjs`: the query-endpoint binding per the phase 1 decision, plus whatever the integration tests surface.
-
-### 5. Test
-
-Same four layers as the k8s repo, in order:
-
-1. **Offline validation** - local file registry, `SHOW SERVICES/RESOURCES/METHODS`, `DESCRIBE EXTENDED` on representative resources (`supabase.projects.projects`, `supabase.config.auth_configs`, `supabase.secrets.secrets`)
-2. **Meta-route tests** - `npm run start-server` / `npm run test-meta-routes -- supabase --verbose` / `npm run stop-server`
-3. **Integration tests** - `tests/integration/mock_supabase_server.mjs` serving real wire shapes; assert row-level results per archetype: list/single projection, `ref` routing, a secret `INSERT`/`DELETE` lifecycle, an auth-config `UPDATE`/`REPLACE` per the semantics finding, the query-endpoint mapping with its result projection, an `EXEC` lifecycle action, and the bearer token throughout
-4. **Smoke tests** - `tests/smoke_test.py` (pystackql) against a **standing dev project** on the free tier (free-tier project creation is slow and capped at two, so the standing project is the target): read smokes across the surface, write lifecycles on cheap vectors (secrets, network restrictions, an edge function record, auth-config toggle-and-restore), a `database.query` round trip against a fixture table; the project create/pause/delete lifecycle runs only in a separately gated job (heavyweight - minutes per operation and quota-bound, the clickhouse gated-service precedent); serial pacing under 60 req/min throughout; `stackql-smoke-<stamp>` naming, breadcrumbs swept first; `--registry public` variant doubles as post-publish verification
+1. `make test-offline` - `SHOW`/`DESCRIBE` against the local file registry (services, resources, verbs, env-var behaviour, snake aliases).
+2. `make test-integration` - the mock Management API (`tests/integration/mock_supabase_server.mjs`, real wire shapes, bearer enforced) with row-level assertions per archetype. `tests/integration/probe.mjs "<sql>"` prints stackql output and the wire call for ad-hoc binding checks.
+3. `make test-meta` - the meta-route walk over a local server.
+4. `make smoke` / `make smoke-live` / `make smoke-read-only` / `make smoke-project-lifecycle` / `make smoke-cleanup` - live, against the standing free-tier dev project from `.env` (`SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_ID`). Free-tier cost: nothing. The project lifecycle only runs in its gated target.
 
 Never run tests against a production organization or project.
 
-### 6. Publish
+## Publish and docs
 
-Push the `supabase` dir to `providers/src` in a feature branch of [`stackql-provider-registry`](https://github.com/stackql/stackql-provider-registry) and follow the registry release flow. Verify with `registry pull supabase` against the dev registry.
-
-### 7. Docs microsite
-
-`website/` is Docusaurus 3.10 following the shared architecture: shared `stackql/docusaurus-config` vendored to `.shared-config/`; site-local files limited to `website/provider.js` (`providerName = 'supabase'`, `providerTitle = 'Supabase'`), thin config wrappers, shared components, and `static/CNAME` pinning `supabase-provider.stackql.io`.
-
-- Author `headerContent1.txt` / `headerContent2.txt` in `provider-dev/docgen/provider-data/` (installation, PAT creation, `SUPABASE_ACCESS_TOKEN`, the `ref` scoping pattern, the rate limit note, the scope notes, example queries)
-- `npm run generate-docs`, then `node website/scripts/sanitize-docs.mjs`
-- Publish via GitHub Pages, DNS: `supabase-provider.stackql.io` CNAME -> `stackql.github.io.`
-
-Lead the docs examples with the queries this provider exists for: the posture set (projects with signups enabled, MFA off, missing SSL enforcement, open network restrictions - project security audit in four `SELECT`s), project estate inventory across organizations, secrets and function inventory, branch hygiene - the flagship sequence (list projects, then `database.query` one of them: control plane to Postgres rows in two statements) - and one cross-provider join for the campaign: supabase projects alongside neon projects (the serverless Postgres estate) once the sibling ships.
-
-### 8. CI
-
-GitHub Actions: fetch + pin check + clean + build, integration tests against the mock, meta-route tests, and (secret-gated) the smoke suite against the standing dev project with the project-lifecycle job separately gated. Weekly spec-drift job. Model on the k8s repo's `build-and-test.yml`.
+Push the `supabase` dir to `providers/src` in a feature branch of [`stackql-provider-registry`](https://github.com/stackql/stackql-provider-registry) and follow the registry release flow; verify with `registry pull supabase` from the dev registry and `make smoke-live`. Docs: `make docs` (generate + sanitize, including the "required unless SUPABASE_PROJECT_ID is set" annotation) then `make website`; GitHub Pages with `supabase-provider.stackql.io` CNAME -> `stackql.github.io.`.
 
 ## Writing conventions
 
-- README and docs copy: measured, precise, no hyperbole. Third-person or passive framing for descriptive copy. The experimental-label citation appears once, factually - never as a refrain.
+- README and docs copy: measured, precise, no hyperbole. Third-person or passive framing for descriptive copy.
 - No em dashes; use `-`. No characters not on a QWERTY keyboard; use `->` for arrows.
-- Sample queries follow the k8s README style: realistic, runnable, `json_extract` for nested fields.
+- Sample queries follow the k8s README style: realistic, runnable, `json_extract` for nested fields; `"database"` double-quoted when selecting that column.
 
 ## Non-negotiables
 
 1. Latest `@stackql/provider-utils`, always
-2. The k8s `feature/provider-dev` repo is the reference pattern; sibling-build NOTES.md findings are reused, not re-derived - deviate only with a documented reason in the README
-3. Test harnesses pace under the 60 req/min limit - a 429 in CI is a harness bug
-4. The project create/delete lifecycle never runs outside the gated job - free-tier quota is a shared resource
+2. The clickhouse repo is the reference pattern; sibling-build NOTES.md findings are reused, not re-derived - deviate only with a documented reason in NOTES.md
+3. Test harnesses pace under the rate limit - a 429 in CI is a harness bug
+4. The project create/delete lifecycle never runs outside the gated target - free-tier quota is a shared resource
 5. Deterministic scripts, never hand-edits to derived artifacts
-6. Every regeneration is followed by the integration test suite before commit
+6. Every regeneration is followed by `make test` before commit
 7. Smoke tests restore any config they toggle and clean up everything they create
