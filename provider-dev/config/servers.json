@@ -1,0 +1,11 @@
+[
+  {
+    "url": "https://api.supabase.com/v1/projects/{ref}",
+    "variables": {
+      "ref": {
+        "description": "Supabase project reference (the Project ID shown in the dashboard under Settings -> General; 20 lowercase letters). Resolved from the SUPABASE_PROJECT_ID environment variable when it is set (x-stackQL-envVar); otherwise it must be supplied on every project-scoped query as WHERE ref = '<ref>'. A WHERE value always takes precedence over the environment.",
+        "x-stackQL-envVar": "SUPABASE_PROJECT_ID"
+      }
+    }
+  }
+]

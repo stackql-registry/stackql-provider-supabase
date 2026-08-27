@@ -1,0 +1,40 @@
+{
+  "name": "stackql-provider-supabase",
+  "version": "0.1.0",
+  "description": "StackQL Provider for Supabase",
+  "type": "module",
+  "scripts": {
+    "fetch-spec": "bash ./bin/fetch-spec.sh",
+    "build-inventory": "node ./provider-dev/scripts/build_inventory.mjs",
+    "split": "node ./bin/split.mjs",
+    "generate-mappings": "node ./node_modules/@stackql/provider-utils/bin/provider-dev-utils.mjs analyze",
+    "map-operations": "node ./provider-dev/scripts/map_operations.mjs",
+    "pre-normalize": "node ./provider-dev/scripts/pre_normalize.mjs",
+    "normalize": "node ./node_modules/@stackql/provider-utils/bin/provider-dev-utils.mjs normalize",
+    "generate-provider": "node ./node_modules/@stackql/provider-utils/bin/provider-dev-utils.mjs generate",
+    "post-process": "node ./provider-dev/scripts/post_process.mjs",
+    "generate-docs": "node ./node_modules/@stackql/provider-utils/bin/docgen-utils.mjs generate-docs",
+    "sanitize-docs": "node ./website/scripts/sanitize-docs.mjs",
+    "start-server": "bash ./bin/start-server.sh",
+    "stop-server": "bash ./bin/stop-server.sh",
+    "server-status": "bash ./bin/server-status.sh",
+    "test-meta-routes": "node ./bin/test-meta-routes.cjs",
+    "test-offline": "node ./tests/offline_validation.mjs",
+    "test-integration": "node ./tests/integration/run_integration_tests.mjs"
+  },
+  "dependencies": {
+    "@apidevtools/swagger-parser": "^12.1.0",
+    "@stackql/pgwire-lite": "^1.0.2",
+    "@stackql/provider-utils": "^0.7.8",
+    "js-yaml": "^4.1.0",
+    "pluralize": "^8.0.0"
+  },
+  "keywords": [
+    "stackql",
+    "supabase",
+    "provider"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

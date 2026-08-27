@@ -1,0 +1,23 @@
+---
+title: supabase
+hide_title: false
+hide_table_of_contents: false
+keywords:
+  - supabase
+  - supabase management api
+  - postgres
+  - edge functions
+  - stackql
+  - infrastructure-as-code
+  - configuration-as-data
+  - cloud inventory
+  - security posture
+description: Query, provision and manage Supabase organizations, projects, branches, edge functions, secrets, auth and Postgres configuration, network restrictions and the project database itself using SQL
+custom_edit_url: null
+image: /img/stackql-supabase-provider-featured-image.png
+id: 'provider-intro'
+---
+
+import CopyableCode from '@site/src/components/CopyableCode/CopyableCode';
+
+Query, provision and operate the Supabase control plane using SQL - organizations and members, the project estate, preview branches, edge functions, secrets and API keys, project configuration (auth, Postgres, pooler, API, storage, realtime, SSL enforcement), custom domains, network restrictions and bans, backups and restore points, add-ons, security and performance advisors, and the project SQL query endpoint, so the control plane and the project database itself are queryable in one place. The project security posture (which projects allow signups, lack MFA or SSL enforcement, or accept connections from anywhere) and the estate inventory are the queries this provider exists for.

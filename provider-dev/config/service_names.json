@@ -1,0 +1,130 @@
+{
+  "description": "Service split for the supabase provider. Ordered path rules, first match wins; every operation path must match a rule (the terminal catch-all assigns remaining project-scoped resources to the projects service). Used by bin/split.mjs and provider-dev/scripts/build_inventory.mjs via lib/spec_helpers.mjs. Deviations from the CLAUDE.md candidate list, decided from the endpoint inventory: analytics (logs and usage), advisors (security/performance lints), oauth (the OAuth-app flow, skip-coded), and profile (the PAT identity read) are surfaces the candidate list did not enumerate; api-keys sit in secrets (vendor tag Secrets); JIT access config sits in database beside the JIT role mappings. A rule with \"excluded\": true still classifies its paths (the inventory records them, reason-coded) but bin/split.mjs does not emit the service - oauth is the OAuth-app user-agent flow (browser redirects and a form token exchange), entirely skip-coded, so it would be an empty service.",
+  "rules": [
+    {
+      "pathRegex": "^/v1/oauth/",
+      "service": "oauth",
+      "excluded": true
+    },
+    {
+      "pathRegex": "^/v1/profile$",
+      "service": "profile"
+    },
+    {
+      "pathRegex": "^/v1/snippets",
+      "service": "database"
+    },
+    {
+      "pathRegex": "^/v1/branches/",
+      "service": "branches"
+    },
+    {
+      "pathRegex": "^/v1/organizations/\\{slug\\}/projects",
+      "service": "projects"
+    },
+    {
+      "pathRegex": "^/v1/organizations",
+      "service": "organizations"
+    },
+    {
+      "pathRegex": "^/v1/projects/\\{ref\\}/branches",
+      "service": "branches"
+    },
+    {
+      "pathRegex": "^/v1/projects/\\{ref\\}/actions",
+      "service": "branches"
+    },
+    {
+      "pathRegex": "^/v1/projects/\\{ref\\}/config/auth",
+      "service": "config"
+    },
+    {
+      "pathRegex": "^/v1/projects/\\{ref\\}/config/database",
+      "service": "config"
+    },
+    {
+      "pathRegex": "^/v1/projects/\\{ref\\}/config/realtime",
+      "service": "config"
+    },
+    {
+      "pathRegex": "^/v1/projects/\\{ref\\}/config/storage",
+      "service": "config"
+    },
+    {
+      "pathRegex": "^/v1/projects/\\{ref\\}/postgrest",
+      "service": "config"
+    },
+    {
+      "pathRegex": "^/v1/projects/\\{ref\\}/ssl-enforcement",
+      "service": "config"
+    },
+    {
+      "pathRegex": "^/v1/projects/\\{ref\\}/pgsodium",
+      "service": "config"
+    },
+    {
+      "pathRegex": "^/v1/projects/\\{ref\\}/jit-access",
+      "service": "database"
+    },
+    {
+      "pathRegex": "^/v1/projects/\\{ref\\}/network-",
+      "service": "network"
+    },
+    {
+      "pathRegex": "^/v1/projects/\\{ref\\}/custom-hostname",
+      "service": "domains"
+    },
+    {
+      "pathRegex": "^/v1/projects/\\{ref\\}/vanity-subdomain",
+      "service": "domains"
+    },
+    {
+      "pathRegex": "^/v1/projects/\\{ref\\}/functions",
+      "service": "functions"
+    },
+    {
+      "pathRegex": "^/v1/projects/\\{ref\\}/secrets",
+      "service": "secrets"
+    },
+    {
+      "pathRegex": "^/v1/projects/\\{ref\\}/api-keys",
+      "service": "secrets"
+    },
+    {
+      "pathRegex": "^/v1/projects/\\{ref\\}/database/",
+      "service": "database"
+    },
+    {
+      "pathRegex": "^/v1/projects/\\{ref\\}/readonly",
+      "service": "database"
+    },
+    {
+      "pathRegex": "^/v1/projects/\\{ref\\}/types/typescript",
+      "service": "database"
+    },
+    {
+      "pathRegex": "^/v1/projects/\\{ref\\}/cli/login-role",
+      "service": "database"
+    },
+    {
+      "pathRegex": "^/v1/projects/\\{ref\\}/storage/",
+      "service": "storage"
+    },
+    {
+      "pathRegex": "^/v1/projects/\\{ref\\}/billing/",
+      "service": "billing"
+    },
+    {
+      "pathRegex": "^/v1/projects/\\{ref\\}/analytics/",
+      "service": "analytics"
+    },
+    {
+      "pathRegex": "^/v1/projects/\\{ref\\}/advisors/",
+      "service": "advisors"
+    },
+    {
+      "pathRegex": "^/v1/projects",
+      "service": "projects"
+    }
+  ]
+}

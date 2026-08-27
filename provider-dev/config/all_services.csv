@@ -1,0 +1,166 @@
+filename,path,operationId,formatted_op_id,verb,response_object,tags,formatted_tags,stackql_resource_name,stackql_method_name,stackql_verb,stackql_object_key,op_description
+advisors.yaml,/advisors/performance,v1-get-performance-advisors,v1_get_performance_advisors,get,V1ProjectAdvisorsResponse,Advisors,advisors,performance_lints,list,select,$.lints,Gets project performance advisors.
+advisors.yaml,/advisors/security,v1-get-security-advisors,v1_get_security_advisors,get,V1ProjectAdvisorsResponse,Advisors,advisors,security_lints,list,select,$.lints,Gets project security advisors.
+analytics.yaml,/analytics/endpoints/logs.all,v1-get-project-logs-all,v1_get_project_logs_all,get,AnalyticsResponse,Analytics,analytics,all_logs,get,select,,Gets project's logs
+analytics.yaml,/analytics/endpoints/logs,v1-get-project-logs,v1_get_project_logs,get,AnalyticsResponse,Analytics,analytics,logs,get,select,,Gets all project's logs in a single log stream
+analytics.yaml,/analytics/endpoints/usage.api-counts,v1-get-project-usage-api-count,v1_get_project_usage_api_count,get,V1GetUsageApiCountResponse,Analytics,analytics,api_counts,get,select,,Gets project's usage api counts
+analytics.yaml,/analytics/endpoints/usage.api-requests-count,v1-get-project-usage-request-count,v1_get_project_usage_request_count,get,V1GetUsageApiRequestsCountResponse,Analytics,analytics,api_request_counts,get,select,,Gets project's usage api requests count
+analytics.yaml,/analytics/endpoints/functions.combined-stats,v1-get-project-function-combined-stats,v1_get_project_function_combined_stats,get,AnalyticsResponse,Analytics,analytics,function_stats,get,select,,Gets a project's function combined statistics
+analytics.yaml,/analytics/endpoints/metrics,v1-scrape-project-metrics,v1_scrape_project_metrics,get,,Analytics,analytics,skip_this_resource,,,,Scrape a project's metrics
+billing.yaml,/billing/addons,v1-list-project-addons,v1_list_project_addons,get,ListProjectAddonsResponse,Billing,billing,addons,list,select,$.selected_addons,List billing addons and compute instance selections
+billing.yaml,/billing/addons,v1-apply-project-addon,v1_apply_project_addon,patch,,Billing,billing,addons,update,update,,"Apply or update billing addons, including compute instance size"
+billing.yaml,/billing/addons/{addon_variant},v1-remove-project-addon,v1_remove_project_addon,delete,,Billing,billing,addons,delete,delete,,Remove billing addons or revert compute instance sizing
+branches.yaml,/v1/branches/{branch_id_or_ref},v1-get-a-branch-config,v1_get_a_branch_config,get,BranchDetailResponse,Environments,environments,branch_configs,get,select,,Get database branch config
+branches.yaml,/v1/branches/{branch_id_or_ref},v1-update-a-branch-config,v1_update_a_branch_config,patch,BranchResponse,Environments,environments,branches,update,update,,Update database branch config
+branches.yaml,/v1/branches/{branch_id_or_ref},v1-delete-a-branch,v1_delete_a_branch,delete,BranchDeleteResponse,Environments,environments,branches,delete,delete,,Delete a database branch
+branches.yaml,/v1/branches/{branch_id_or_ref}/push,v1-push-a-branch,v1_push_a_branch,post,BranchUpdateResponse,Environments,environments,branches,push,exec,,Pushes a database branch
+branches.yaml,/v1/branches/{branch_id_or_ref}/merge,v1-merge-a-branch,v1_merge_a_branch,post,BranchUpdateResponse,Environments,environments,branches,merge,exec,,Merges a database branch
+branches.yaml,/v1/branches/{branch_id_or_ref}/reset,v1-reset-a-branch,v1_reset_a_branch,post,BranchUpdateResponse,Environments,environments,branches,reset,exec,,Resets a database branch
+branches.yaml,/v1/branches/{branch_id_or_ref}/restore,v1-restore-a-branch,v1_restore_a_branch,post,BranchRestoreResponse,Environments,environments,branches,restore,exec,,Restore a scheduled branch deletion
+branches.yaml,/v1/branches/{branch_id_or_ref}/diff,v1-diff-a-branch,v1_diff_a_branch,get,,Environments,environments,skip_this_resource,,,,[Beta] Diffs a database branch
+branches.yaml,/actions,v1-list-action-runs,v1_list_action_runs,get,ListActionRunResponse,Environments,environments,action_runs,list,select,,List all action runs
+branches.yaml,/actions/{run_id},v1-get-action-run,v1_get_action_run,get,ActionRunResponse,Environments,environments,action_runs,get,select,,Get the status of an action run
+branches.yaml,/actions/{run_id}/status,v1-update-action-run-status,v1_update_action_run_status,patch,UpdateRunStatusResponse,Environments,environments,action_runs,update_status,exec,,Update the status of an action run
+branches.yaml,/actions/{run_id}/logs,v1-get-action-run-logs,v1_get_action_run_logs,get,,Environments,environments,skip_this_resource,,,,Get the logs of an action run
+branches.yaml,/branches,v1-list-all-branches,v1_list_all_branches,get,BranchResponse,Environments,environments,branches,list,select,,List all database branches
+branches.yaml,/branches,v1-create-a-branch,v1_create_a_branch,post,BranchResponse,Environments,environments,branches,create,insert,,Create a database branch
+branches.yaml,/branches,v1-disable-preview-branching,v1_disable_preview_branching,delete,,Environments,environments,branches,disable_branching,exec,,Disables preview branching
+branches.yaml,/branches/{name},v1-get-a-branch,v1_get_a_branch,get,BranchResponse,Environments,environments,branches,get,select,,Get a database branch
+config.yaml,/pgsodium,v1-get-pgsodium-config,v1_get_pgsodium_config,get,PgsodiumConfigResponse,Secrets,secrets,pgsodium_configs,get,select,,[Beta] Gets project's pgsodium config
+config.yaml,/pgsodium,v1-update-pgsodium-config,v1_update_pgsodium_config,put,PgsodiumConfigResponse,Secrets,secrets,pgsodium_configs,update,update,,[Beta] Updates project's pgsodium config. Updating the root_key can cause all data encrypted with the older key to become inaccessible.
+config.yaml,/postgrest,v1-get-postgrest-service-config,v1_get_postgrest_service_config,get,PostgrestConfigWithJWTSecretResponse,Rest,rest,postgrest_configs,get,select,,Gets project's postgrest config
+config.yaml,/postgrest,v1-update-postgrest-service-config,v1_update_postgrest_service_config,patch,V1PostgrestConfigResponse,Rest,rest,postgrest_configs,update,update,,Updates project's postgrest config
+config.yaml,/ssl-enforcement,v1-get-ssl-enforcement-config,v1_get_ssl_enforcement_config,get,SslEnforcementResponse,Database,database,ssl_enforcement_configs,get,select,,[Beta] Get project's SSL enforcement configuration.
+config.yaml,/ssl-enforcement,v1-update-ssl-enforcement-config,v1_update_ssl_enforcement_config,put,SslEnforcementResponse,Database,database,ssl_enforcement_configs,update,update,,[Beta] Update project's SSL enforcement configuration.
+config.yaml,/config/auth/signing-keys/legacy,v1-create-legacy-signing-key,v1_create_legacy_signing_key,post,SigningKeyResponse,Auth,auth,legacy_signing_keys,create,insert,,Set up the project's existing JWT secret as an in_use JWT signing key. This endpoint will be removed in the future always check for HTTP 404 Not Found.
+config.yaml,/config/auth/signing-keys/legacy,v1-get-legacy-signing-key,v1_get_legacy_signing_key,get,SigningKeyResponse,Auth,auth,legacy_signing_keys,get,select,,"Get the signing key information for the JWT secret imported as signing key for this project. This endpoint will be removed in the future, check for HTTP 404 Not Found."
+config.yaml,/config/auth/signing-keys,v1-create-project-signing-key,v1_create_project_signing_key,post,SigningKeyResponse,Auth,auth,auth_signing_keys,create,insert,,Create a new signing key for the project in standby status
+config.yaml,/config/auth/signing-keys,v1-get-project-signing-keys,v1_get_project_signing_keys,get,SigningKeysResponse,Auth,auth,auth_signing_keys,list,select,$.keys,List all signing keys for the project
+config.yaml,/config/auth/signing-keys/{id},v1-get-project-signing-key,v1_get_project_signing_key,get,SigningKeyResponse,Auth,auth,auth_signing_keys,get,select,,Get information about a signing key
+config.yaml,/config/auth/signing-keys/{id},v1-remove-project-signing-key,v1_remove_project_signing_key,delete,SigningKeyResponse,Auth,auth,auth_signing_keys,delete,delete,,Remove a signing key from a project. Only possible if the key has been in revoked status for a while.
+config.yaml,/config/auth/signing-keys/{id},v1-update-project-signing-key,v1_update_project_signing_key,patch,SigningKeyResponse,Auth,auth,auth_signing_keys,update,update,,"Update a signing key, mainly its status"
+config.yaml,/config/auth,v1-get-auth-service-config,v1_get_auth_service_config,get,AuthConfigResponse,Auth,auth,auth_configs,get,select,,Gets project's auth config
+config.yaml,/config/auth,v1-update-auth-service-config,v1_update_auth_service_config,patch,AuthConfigResponse,Auth,auth,auth_configs,update,update,,Updates a project's auth config
+config.yaml,/config/auth/third-party-auth,v1-create-project-tpa-integration,v1_create_project_tpa_integration,post,ThirdPartyAuth,Auth,auth,third_party_auth_integrations,create,insert,,Creates a new third-party auth integration
+config.yaml,/config/auth/third-party-auth,v1-list-project-tpa-integrations,v1_list_project_tpa_integrations,get,ThirdPartyAuth,Auth,auth,third_party_auth_integrations,list,select,,Lists all third-party auth integrations
+config.yaml,/config/auth/third-party-auth/{tpa_id},v1-delete-project-tpa-integration,v1_delete_project_tpa_integration,delete,ThirdPartyAuth,Auth,auth,third_party_auth_integrations,delete,delete,,Removes a third-party auth integration
+config.yaml,/config/auth/third-party-auth/{tpa_id},v1-get-project-tpa-integration,v1_get_project_tpa_integration,get,ThirdPartyAuth,Auth,auth,third_party_auth_integrations,get,select,,Get a third-party integration
+config.yaml,/config/storage,v1-get-storage-config,v1_get_storage_config,get,StorageConfigResponse,Storage,storage,storage_configs,get,select,,Gets project's storage config
+config.yaml,/config/storage,v1-update-storage-config,v1_update_storage_config,patch,,Storage,storage,storage_configs,update,update,,Updates project's storage config
+config.yaml,/config/database/pgbouncer,v1-get-project-pgbouncer-config,v1_get_project_pgbouncer_config,get,V1PgbouncerConfigResponse,Database,database,pgbouncer_configs,get,select,,Get project's pgbouncer config
+config.yaml,/config/database/pooler,v1-get-pooler-config,v1_get_pooler_config,get,SupavisorConfigResponse,Database,database,pooler_configs,list,select,,Gets project's supavisor config
+config.yaml,/config/database/pooler,v1-update-pooler-config,v1_update_pooler_config,patch,UpdateSupavisorConfigResponse,Database,database,pooler_configs,update,update,,Updates project's supavisor config
+config.yaml,/config/database/postgres,v1-get-postgres-config,v1_get_postgres_config,get,PostgresConfigResponse,Database,database,postgres_configs,get,select,,Gets project's Postgres config
+config.yaml,/config/database/postgres,v1-update-postgres-config,v1_update_postgres_config,put,PostgresConfigResponse,Database,database,postgres_configs,update,update,,Updates project's Postgres config
+config.yaml,/config/realtime,v1-get-realtime-config,v1_get_realtime_config,get,RealtimeConfigResponse,Realtime,realtime,realtime_configs,get,select,,Gets realtime configuration
+config.yaml,/config/realtime,v1-update-realtime-config,v1_update_realtime_config,patch,,Realtime,realtime,realtime_configs,update,update,,Updates realtime configuration
+config.yaml,/config/realtime/shutdown,v1-shutdown-realtime,v1_shutdown_realtime,post,,Realtime,realtime,realtime_configs,shutdown,exec,,Shutdowns realtime connections for a project
+config.yaml,/config/auth/sso/providers,v1-create-a-sso-provider,v1_create_a_sso_provider,post,CreateProviderResponse,Auth,auth,sso_providers,create,insert,,Creates a new SSO provider
+config.yaml,/config/auth/sso/providers,v1-list-all-sso-provider,v1_list_all_sso_provider,get,ListProvidersResponse,Auth,auth,sso_providers,list,select,$.items,Lists all SSO providers
+config.yaml,/config/auth/sso/providers/{provider_id},v1-get-a-sso-provider,v1_get_a_sso_provider,get,GetProviderResponse,Auth,auth,sso_providers,get,select,,Gets a SSO provider by its UUID
+config.yaml,/config/auth/sso/providers/{provider_id},v1-update-a-sso-provider,v1_update_a_sso_provider,put,UpdateProviderResponse,Auth,auth,sso_providers,update,update,,Updates a SSO provider by its UUID
+config.yaml,/config/auth/sso/providers/{provider_id},v1-delete-a-sso-provider,v1_delete_a_sso_provider,delete,DeleteProviderResponse,Auth,auth,sso_providers,delete,delete,,Removes a SSO provider by its UUID
+database.yaml,/v1/snippets,v1-list-all-snippets,v1_list_all_snippets,get,SnippetList,Database,database,snippets,list,select,$.data,Lists SQL snippets for the logged in user
+database.yaml,/v1/snippets/{id},v1-get-a-snippet,v1_get_a_snippet,get,SnippetResponse,Database,database,snippets,get,select,,Gets a specific SQL snippet
+database.yaml,/jit-access,v1-get-jit-access-config,v1_get_jit_access_config,get,,Database,database,jit_access_configs,get,select,,[Beta] Get project's temporary access configuration.
+database.yaml,/jit-access,v1-update-jit-access-config,v1_update_jit_access_config,put,,Database,database,jit_access_configs,update,update,,[Beta] Update project's temporary access configuration.
+database.yaml,/types/typescript,v1-generate-typescript-types,v1_generate_typescript_types,get,TypescriptResponse,Database,database,typescript_types,get,select,,Generate TypeScript types
+database.yaml,/readonly,v1-get-readonly-mode-status,v1_get_readonly_mode_status,get,ReadOnlyStatusResponse,Database,database,readonly_mode,get,select,,Returns project's readonly mode status
+database.yaml,/readonly/temporary-disable,v1-disable-readonly-mode-temporarily,v1_disable_readonly_mode_temporarily,post,,Database,database,readonly_mode,temporary_disable,exec,,Disables project's readonly mode for the next 15 minutes
+database.yaml,/cli/login-role,v1-create-login-role,v1_create_login_role,post,CreateRoleResponse,Database,database,cli_login_roles,create,insert,,[Beta] Create a login role for CLI with temporary password
+database.yaml,/cli/login-role,v1-delete-login-roles,v1_delete_login_roles,delete,DeleteRolesResponse,Database,database,cli_login_roles,delete,delete,,[Beta] Delete existing login roles used by CLI
+database.yaml,/database/migrations,v1-list-migration-history,v1_list_migration_history,get,V1ListMigrationsResponse,Database,database,migrations,list,select,,List applied migration versions
+database.yaml,/database/migrations,v1-apply-a-migration,v1_apply_a_migration,post,,Database,database,migrations,create,insert,,Apply a database migration
+database.yaml,/database/migrations,v1-upsert-a-migration,v1_upsert_a_migration,put,,Database,database,migrations,upsert,exec,,Upsert a database migration without applying
+database.yaml,/database/migrations,v1-rollback-migrations,v1_rollback_migrations,delete,,Database,database,migrations,delete,delete,,Rollback database migrations and remove them from history table
+database.yaml,/database/migrations/{version},v1-get-a-migration,v1_get_a_migration,get,V1GetMigrationResponse,Database,database,migrations,get,select,,Fetch an existing entry from migration history
+database.yaml,/database/migrations/{version},v1-patch-a-migration,v1_patch_a_migration,patch,,Database,database,migrations,update,update,,Patch an existing entry in migration history
+database.yaml,/database/query,v1-run-a-query,v1_run_a_query,post,,Database,database,queries,run,insert,,[Beta] Run sql query
+database.yaml,/database/query/read-only,v1-read-only-query,v1_read_only_query,post,,Database,database,queries,run_read_only,exec,,[Beta] Run a sql query as supabase_read_only_user
+database.yaml,/database/webhooks/enable,v1-enable-database-webhook,v1_enable_database_webhook,post,,Database,database,webhooks,enable,exec,,[Beta] Enables Database Webhooks on the project
+database.yaml,/database/context,v1-get-database-metadata,v1_get_database_metadata,get,GetProjectDbMetadataResponse,Database,database,databases,list,select,$.databases,Gets database metadata for the given project.
+database.yaml,/database/password,v1-update-database-password,v1_update_database_password,patch,V1UpdatePasswordResponse,Database,database,databases,update_password,exec,,Updates the database password
+database.yaml,/database/jit,v1-get-jit-access,v1_get_jit_access,get,JitAccessResponse,Database,database,jit_role_mappings,get,select,,Get user-id to role mappings for JIT access
+database.yaml,/database/jit,v1-authorize-jit-access,v1_authorize_jit_access,post,JitAuthorizeAccessResponse,Database,database,jit_access,create,insert,,Authorize user-id to role mappings for JIT access
+database.yaml,/database/jit,v1-update-jit-access,v1_update_jit_access,put,JitAccessResponse,Database,database,jit_access,update,update,,Updates a user mapping for JIT access
+database.yaml,/database/jit/list,v1-list-jit-access,v1_list_jit_access,get,JitListAccessResponse,Database,database,jit_access,list,select,$.items,List all user-id to role mappings for JIT access
+database.yaml,/database/jit/invite,v1-invite-external-jit-access,v1_invite_external_jit_access,post,InviteExternalUserJitResponse,Database,database,jit_invites,create,insert,,Invites an external user to a database for JIT access
+database.yaml,/database/jit/invite/accept,v1-accept-invite-external-jit-access,v1_accept_invite_external_jit_access,post,JitAccessResponse,Database,database,jit_invites,accept,exec,,Accepts invitation for JIT database access
+database.yaml,/database/jit/invite/{invite_id},v1-delete-invite-external-jit-access,v1_delete_invite_external_jit_access,delete,,Database,database,jit_invites,delete,delete,,Deletes the invite for an external user to a database for JIT access
+database.yaml,/database/jit/{user_id},v1-delete-jit-access,v1_delete_jit_access,delete,,Database,database,jit_access,delete,delete,,Delete JIT access by user-id
+database.yaml,/database/openapi,v1-get-database-openapi,v1_get_database_openapi,get,,Database,database,skip_this_resource,,,,Get PostgREST OpenAPI spec
+database.yaml,/database/backups,v1-list-all-backups,v1_list_all_backups,get,V1BackupsResponse,Database,database,backups,list,select,$.backups,Lists all backups
+database.yaml,/database/backups/restore-pitr,v1-restore-pitr-backup,v1_restore_pitr_backup,post,,Database,database,backups,restore_pitr,exec,,Restores a PITR backup for a database
+database.yaml,/database/backups/restore-point,v1-create-restore-point,v1_create_restore_point,post,V1RestorePointResponse,Database,database,restore_points,create,insert,,Initiates a creation of a restore point for a database
+database.yaml,/database/backups/restore-point,v1-get-restore-point,v1_get_restore_point,get,V1RestorePointResponse,Database,database,restore_points,get,select,,Get restore points for project
+database.yaml,/database/backups/restore,v1-restore-physical-backup,v1_restore_physical_backup,post,,Database,database,backups,restore,exec,,Restores a physical backup for a database
+database.yaml,/database/backups/schedule,v1-get-backup-schedule,v1_get_backup_schedule,get,V1BackupScheduleResponse,Database,database,backup_schedules,get,select,,Gets the backup schedule for a project
+database.yaml,/database/backups/schedule,v1-update-backup-schedule,v1_update_backup_schedule,patch,V1BackupScheduleResponse,Database,database,backup_schedules,update,update,,Updates the backup schedule time for a project
+database.yaml,/database/backups/undo,v1-undo,v1_undo,post,,Database,database,backups,undo,exec,,Initiates an undo to a given restore point
+domains.yaml,/custom-hostname,v1-get-hostname-config,v1_get_hostname_config,get,UpdateCustomHostnameResponse,Domains,domains,custom_hostnames,get,select,,[Beta] Gets project's custom hostname config
+domains.yaml,/custom-hostname,v1-Delete hostname config,v1_delete hostname config,delete,,Domains,domains,custom_hostnames,delete,delete,,[Beta] Deletes a project's custom hostname configuration
+domains.yaml,/custom-hostname/initialize,v1-update-hostname-config,v1_update_hostname_config,post,UpdateCustomHostnameResponse,Domains,domains,custom_hostnames,initialize,exec,,[Beta] Updates project's custom hostname configuration
+domains.yaml,/custom-hostname/reverify,v1-verify-dns-config,v1_verify_dns_config,post,UpdateCustomHostnameResponse,Domains,domains,custom_hostnames,reverify,exec,,[Beta] Attempts to verify the DNS configuration for project's custom hostname configuration
+domains.yaml,/custom-hostname/activate,v1-activate-custom-hostname,v1_activate_custom_hostname,post,UpdateCustomHostnameResponse,Domains,domains,custom_hostnames,activate,exec,,[Beta] Activates a custom hostname for a project.
+domains.yaml,/vanity-subdomain,v1-get-vanity-subdomain-config,v1_get_vanity_subdomain_config,get,VanitySubdomainConfigResponse,Domains,domains,vanity_subdomains,get,select,,[Beta] Gets current vanity subdomain config
+domains.yaml,/vanity-subdomain,v1-deactivate-vanity-subdomain-config,v1_deactivate_vanity_subdomain_config,delete,,Domains,domains,vanity_subdomains,delete,delete,,[Beta] Deletes a project's vanity subdomain configuration
+domains.yaml,/vanity-subdomain/check-availability,v1-check-vanity-subdomain-availability,v1_check_vanity_subdomain_availability,post,SubdomainAvailabilityResponse,Domains,domains,vanity_subdomains,check_availability,exec,,[Beta] Checks vanity subdomain availability
+domains.yaml,/vanity-subdomain/activate,v1-activate-vanity-subdomain-config,v1_activate_vanity_subdomain_config,post,ActivateVanitySubdomainResponse,Domains,domains,vanity_subdomains,activate,exec,,[Beta] Activates a vanity subdomain for a project.
+functions.yaml,/functions,v1-list-all-functions,v1_list_all_functions,get,FunctionResponse,Edge Functions,edge functions,edge_functions,list,select,,List all functions
+functions.yaml,/functions,v1-create-a-function,v1_create_a_function,post,FunctionResponse,Edge Functions,edge functions,edge_functions,create,insert,,Create a function
+functions.yaml,/functions,v1-bulk-update-functions,v1_bulk_update_functions,put,BulkUpdateFunctionResponse,Edge Functions,edge functions,skip_this_resource,,,,Bulk update functions
+functions.yaml,/functions/deploy,v1-deploy-a-function,v1_deploy_a_function,post,DeployFunctionResponse,Edge Functions,edge functions,skip_this_resource,,,,Deploy a function
+functions.yaml,/functions/{function_slug},v1-get-a-function,v1_get_a_function,get,FunctionSlugResponse,Edge Functions,edge functions,edge_functions,get,select,,Retrieve a function
+functions.yaml,/functions/{function_slug},v1-update-a-function,v1_update_a_function,patch,FunctionResponse,Edge Functions,edge functions,edge_functions,update,update,,Update a function
+functions.yaml,/functions/{function_slug},v1-delete-a-function,v1_delete_a_function,delete,,Edge Functions,edge functions,edge_functions,delete,delete,,Delete a function
+functions.yaml,/functions/{function_slug}/body,v1-get-a-function-body,v1_get_a_function_body,get,StreamableFile,Edge Functions,edge functions,skip_this_resource,,,,Retrieve a function body
+network.yaml,/network-bans/retrieve,v1-list-all-network-bans,v1_list_all_network_bans,post,NetworkBanResponse,Projects,projects,network_bans,retrieve,exec,,[Beta] Gets project's network bans
+network.yaml,/network-bans/retrieve/enriched,v1-list-all-network-bans-enriched,v1_list_all_network_bans_enriched,post,NetworkBanResponseEnriched,Projects,projects,network_bans,list,select,$.banned_ipv4_addresses,[Beta] Gets project's network bans with additional information about which databases they affect
+network.yaml,/network-bans,v1-delete-network-bans,v1_delete_network_bans,delete,,Projects,projects,network_bans,delete,delete,,[Beta] Remove network bans.
+network.yaml,/network-restrictions,v1-get-network-restrictions,v1_get_network_restrictions,get,NetworkRestrictionsResponse,Projects,projects,network_restrictions,get,select,,[Beta] Gets project's network restrictions
+network.yaml,/network-restrictions,v1-patch-network-restrictions,v1_patch_network_restrictions,patch,NetworkRestrictionsV2Response,Projects,projects,network_restrictions,update,update,,[Alpha] Updates project's network restrictions by adding or removing CIDRs
+network.yaml,/network-restrictions/apply,v1-update-network-restrictions,v1_update_network_restrictions,post,NetworkRestrictionsResponse,Projects,projects,network_restrictions,apply,exec,,[Beta] Updates project's network restrictions
+organizations.yaml,/v1/organizations,v1-list-all-organizations,v1_list_all_organizations,get,OrganizationResponseV1,Organizations,organizations,organizations,list,select,,List all organizations
+organizations.yaml,/v1/organizations,v1-create-an-organization,v1_create_an_organization,post,OrganizationResponseV1,Organizations,organizations,organizations,create,insert,,Create an organization
+organizations.yaml,/v1/organizations/{slug}/entitlements,v1-get-organization-entitlements,v1_get_organization_entitlements,get,V1ListEntitlementsResponse,Organizations,organizations,entitlements,get,select,,Get entitlements for an organization
+organizations.yaml,/v1/organizations/{slug}/members,v1-list-organization-members,v1_list_organization_members,get,V1OrganizationMemberResponse,Organizations,organizations,members,list,select,,List members of an organization
+organizations.yaml,/v1/organizations/{slug},v1-get-an-organization,v1_get_an_organization,get,V1OrganizationSlugResponse,Organizations,organizations,organizations,get,select,,Gets information about the organization
+organizations.yaml,/v1/organizations/{slug}/project-claim/{token},v1-get-organization-project-claim,v1_get_organization_project_claim,get,OrganizationProjectClaimResponse,Organizations,organizations,project_claims,get,select,,Gets project details for the specified organization and claim token
+organizations.yaml,/v1/organizations/{slug}/project-claim/{token},v1-claim-project-for-organization,v1_claim_project_for_organization,post,,Organizations,organizations,project_claims,claim,exec,,Claims project for the specified organization
+profile.yaml,/v1/profile,v1-get-profile,v1_get_profile,get,V1ProfileResponse,Profile,profile,profiles,get,select,,Gets the user's profile
+projects.yaml,/v1/projects,v1-list-all-projects,v1_list_all_projects,get,V1ProjectWithDatabaseResponse,Projects,projects,projects,list,select,,List all projects
+projects.yaml,/v1/projects,v1-create-a-project,v1_create_a_project,post,V1ProjectResponse,Projects,projects,projects,create,insert,,Create a project
+projects.yaml,/v1/projects/available-regions,v1-get-available-regions,v1_get_available_regions,get,RegionsInfo,Projects,projects,available_regions,get,select,,[Beta] Gets the list of available regions that can be used for a new project
+projects.yaml,/v1/projects/{ref},v1-get-project,v1_get_project,get,V1ProjectWithDatabaseResponse,Projects,projects,projects,get,select,,Gets a specific project that belongs to the authenticated user
+projects.yaml,/v1/projects/{ref},v1-delete-a-project,v1_delete_a_project,delete,V1ProjectRefResponse,Projects,projects,projects,delete,delete,,Deletes the given project
+projects.yaml,/v1/projects/{ref},v1-update-a-project,v1_update_a_project,patch,V1ProjectRefResponse,Projects,projects,projects,update,update,,Updates the given project
+projects.yaml,/upgrade,v1-upgrade-postgres-version,v1_upgrade_postgres_version,post,ProjectUpgradeInitiateResponse,Projects,projects,projects,upgrade,exec,,[Beta] Upgrades the project's Postgres version
+projects.yaml,/upgrade/eligibility,v1-get-postgres-upgrade-eligibility,v1_get_postgres_upgrade_eligibility,get,ProjectUpgradeEligibilityResponse,Projects,projects,upgrade_eligibility,get,select,,[Beta] Returns the project's eligibility for upgrades
+projects.yaml,/upgrade/status,v1-get-postgres-upgrade-status,v1_get_postgres_upgrade_status,get,DatabaseUpgradeStatusResponse,Projects,projects,upgrade_status,get,select,,[Beta] Gets the latest status of the project's upgrade
+projects.yaml,/read-replicas/setup,v1-setup-a-read-replica,v1_setup_a_read_replica,post,,Database,database,read_replicas,setup,exec,,[Beta] Set up a read replica
+projects.yaml,/read-replicas/remove,v1-remove-a-read-replica,v1_remove_a_read_replica,post,,Database,database,read_replicas,remove,exec,,[Beta] Remove a read replica
+projects.yaml,/health,v1-get-services-health,v1_get_services_health,get,V1ServiceHealthResponse,Projects,projects,service_health,list,select,,Gets project's service health status
+projects.yaml,/pause,v1-pause-a-project,v1_pause_a_project,post,,Projects,projects,projects,pause,exec,,Pauses the given project
+projects.yaml,/restart,v1-restart-a-project,v1_restart_a_project,post,,Projects,projects,projects,restart,exec,,Restarts the given project
+projects.yaml,/restore,v1-list-available-restore-versions,v1_list_available_restore_versions,get,GetProjectAvailableRestoreVersionsResponse,Projects,projects,restore_versions,list,select,$.available_versions,Lists available restore versions for the given project
+projects.yaml,/restore,v1-restore-a-project,v1_restore_a_project,post,,Projects,projects,projects,restore,exec,,Restores the given project
+projects.yaml,/restore/cancel,v1-cancel-a-project-restoration,v1_cancel_a_project_restoration,post,,Projects,projects,projects,cancel_restore,exec,,Cancels the given project restoration
+projects.yaml,/claim-token,v1-get-project-claim-token,v1_get_project_claim_token,get,ProjectClaimTokenResponse,Projects,projects,claim_tokens,get,select,,Gets project claim token
+projects.yaml,/claim-token,v1-create-project-claim-token,v1_create_project_claim_token,post,CreateProjectClaimTokenResponse,Projects,projects,claim_tokens,create,insert,,Creates project claim token
+projects.yaml,/claim-token,v1-delete-project-claim-token,v1_delete_project_claim_token,delete,,Projects,projects,claim_tokens,delete,delete,,Revokes project claim token
+projects.yaml,/config/disk,v1-get-database-disk,v1_get_database_disk,get,DiskResponse,Projects,projects,disk_configs,get,select,,Get database disk attributes
+projects.yaml,/config/disk,v1-modify-database-disk,v1_modify_database_disk,post,,Projects,projects,disk_configs,modify,exec,,Modify database disk
+projects.yaml,/config/disk/util,v1-get-disk-utilization,v1_get_disk_utilization,get,DiskUtilMetricsResponse,Projects,projects,disk_utilization,get,select,,Get disk utilization
+projects.yaml,/config/disk/autoscale,v1-get-project-disk-autoscale-config,v1_get_project_disk_autoscale_config,get,DiskAutoscaleConfig,Projects,projects,disk_autoscale_configs,get,select,,Gets project disk autoscale config
+projects.yaml,/v1/organizations/{slug}/projects,v1-get-all-projects-for-organization,v1_get_all_projects_for_organization,get,OrganizationProjectsResponse,Projects,projects,organization_projects,list,select,$.projects,Gets all projects for the given organization
+secrets.yaml,/api-keys,v1-get-project-api-keys,v1_get_project_api_keys,get,ApiKeyResponse,Secrets,secrets,api_keys,list,select,,Get project api keys
+secrets.yaml,/api-keys,v1-create-project-api-key,v1_create_project_api_key,post,ApiKeyResponse,Secrets,secrets,api_keys,create,insert,,Creates a new API key for the project
+secrets.yaml,/api-keys/legacy,v1-get-project-legacy-api-keys,v1_get_project_legacy_api_keys,get,LegacyApiKeysResponse,Secrets,secrets,legacy_api_keys,get,select,,"Check whether JWT based legacy (anon, service_role) API keys are enabled. This API endpoint will be removed in the future, check for HTTP 404 Not Found."
+secrets.yaml,/api-keys/legacy,v1-update-project-legacy-api-keys,v1_update_project_legacy_api_keys,put,LegacyApiKeysResponse,Secrets,secrets,legacy_api_keys,update,update,,"Disable or re-enable JWT based legacy (anon, service_role) API keys. This API endpoint will be removed in the future, check for HTTP 404 Not Found."
+secrets.yaml,/api-keys/{id},v1-update-project-api-key,v1_update_project_api_key,patch,ApiKeyResponse,Secrets,secrets,api_keys,update,update,,Updates an API key for the project
+secrets.yaml,/api-keys/{id},v1-get-project-api-key,v1_get_project_api_key,get,ApiKeyResponse,Secrets,secrets,api_keys,get,select,,Get API key
+secrets.yaml,/api-keys/{id},v1-delete-project-api-key,v1_delete_project_api_key,delete,ApiKeyResponse,Secrets,secrets,api_keys,delete,delete,,Deletes an API key for the project
+secrets.yaml,/secrets,v1-list-all-secrets,v1_list_all_secrets,get,SecretResponse,Secrets,secrets,secrets,list,select,,List all secrets
+secrets.yaml,/secrets,v1-bulk-create-secrets,v1_bulk_create_secrets,post,,Secrets,secrets,secrets,create,insert,,Bulk create secrets
+secrets.yaml,/secrets,v1-bulk-delete-secrets,v1_bulk_delete_secrets,delete,,Secrets,secrets,secrets,delete,delete,,Bulk delete secrets
+storage.yaml,/storage/buckets,v1-list-all-buckets,v1_list_all_buckets,get,V1StorageBucketResponse,Storage,storage,buckets,list,select,,Lists all buckets
