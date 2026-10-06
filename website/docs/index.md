@@ -27,6 +27,7 @@ Query, provision and operate the Supabase control plane using SQL - organization
 
 total services: __14__  
 total resources: __65__  
+source project: __[stackql-provider-supabase](https://github.com/stackql-registry/stackql-provider-supabase)__  
 
 :::
 
