@@ -54,13 +54,21 @@ import re
 import secrets as pysecrets
 import sys
 import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 SMOKE_PREFIX = "stackql-smoke-"
+# API key names must match ^[a-z_][a-z0-9_]*$ (vendor validation, live run 2026-10-12)
+API_KEY_PREFIX = "stackql_smoke_"
 SECRET_PREFIX = "STACKQL_SMOKE_"
 FIXTURE_TABLE = "public.stackql_smoke_fixture"
 INTER_REQUEST_DELAY_S = 1.2  # ~50 req/min, under the documented limit with margin (NOTES.md finding 6)
+# The API key endpoints carry a stricter per-endpoint limit than the 120/min
+# budget: back-to-back writes at 1.2 s answer 429 "Please wait a few seconds"
+# (live run 2026-10-12, NOTES.md finding 19). Writes in that lifecycle pause longer.
+API_KEY_WRITE_DELAY_S = 6.0
 # x-stackQL-envVar server variable resolution (SUPABASE_PROJECT_ID) landed in
 # stackql v0.10.601 (any-sdk v0.5.4-alpha01, stackql/stackql#707). pystackql
 # manages its own stackql binary, so the harness upgrades it when older.
@@ -81,6 +89,7 @@ class Smoke:
         self.args = args
         self.stamp = str(int(time.time()))[-6:]
         self.name = f"{SMOKE_PREFIX}{self.stamp}"
+        self.api_key_name = f"{API_KEY_PREFIX}{self.stamp}"
         self.secret_name = f"{SECRET_PREFIX}{self.stamp}"
         self.results: list[tuple[str, str, str]] = []
         self.requests = 0
@@ -131,6 +140,30 @@ class Smoke:
             sys.exit(f"stackql {self.sq.version} is still too old after upgrade")
 
     # ------------------------------------------------------------------ core
+    def token_is_user_scoped(self) -> bool:
+        # pystackql returns an empty list (no error text) for a SELECT that
+        # fails, so a 403 on /v1/profile is indistinguishable from no rows.
+        # One paced GET establishes the token scope instead: organization-
+        # scoped tokens answer 403 "requires a user-scoped access token"
+        # (NOTES.md finding 19).
+        if self.requests:
+            time.sleep(INTER_REQUEST_DELAY_S)
+        self.requests += 1
+        req = urllib.request.Request(
+            "https://api.supabase.com/v1/profile",
+            headers={"Authorization": f"Bearer {os.environ['SUPABASE_ACCESS_TOKEN']}"},
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=30):
+                return True
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode("utf-8", "replace")
+            if exc.code == 403 and "user-scoped" in body:
+                return False
+            return True  # any other failure: let the provider step report it
+        except urllib.error.URLError:
+            return True
+
     def q(self, sql: str):
         # serial pacing under the per-user rate limit
         if self.requests:
@@ -152,13 +185,20 @@ class Smoke:
             return out, text
         return out if isinstance(out, list) else [out], None
 
-    def step(self, name: str, sql: str, expect_rows: bool = False, contains: str | None = None):
+    def step(self, name: str, sql: str, expect_rows: bool = False, contains: str | None = None,
+             skip_if_empty: str | None = None):
+        # skip_if_empty=reason: an empty result with no error is a SKIP (an
+        # environment property, not a provider defect) rather than a FAIL.
         rows, err = self.q(sql)
         if err:
             self.results.append((name, "FAIL", err[:200]))
             print(f"  FAIL  {name}  [{err[:140]}]")
             return None
         blob = json.dumps(rows, default=str)
+        if expect_rows and not rows and skip_if_empty:
+            self.results.append((name, "SKIP", skip_if_empty))
+            print(f"  SKIP  {name}  [{skip_if_empty}]")
+            return None
         if expect_rows and not rows:
             self.results.append((name, "FAIL", "expected rows, got none"))
             print(f"  FAIL  {name}  [no rows]")
@@ -202,6 +242,22 @@ class Smoke:
         return blob or []
 
     # ------------------------------------------------------- breadcrumb sweep
+    def pull_published_provider(self) -> None:
+        # --live verifies the published provider; pull the current registry
+        # version explicitly (the binary does not auto-pull under pystackql:
+        # SHOW/SELECT return no rows, and every step reads as "no rows") and
+        # fail fast if the pull or the first SHOW does not succeed.
+        print("== registry pull ==")
+        try:
+            out = self.sq.executeStmt("REGISTRY PULL supabase")
+        except Exception as exc:  # noqa: BLE001
+            sys.exit(f"REGISTRY PULL supabase failed: {exc}")
+        print(f"  {json.dumps(out, default=str)[:160]}")
+        rows, err = self.q("SHOW SERVICES IN supabase")
+        if err or not rows:
+            sys.exit(f"published supabase provider did not load after REGISTRY PULL: {err or 'SHOW SERVICES returned no rows'}")
+        print(f"  {len(rows)} services")
+
     def cleanup_breadcrumbs(self) -> None:
         print("== breadcrumb sweep ==")
         rows, err = self.q("SELECT name FROM supabase.secrets.secrets")
@@ -225,9 +281,10 @@ class Smoke:
             print(f"  WARN api keys sweep list failed: {err[:120]}")
         else:
             for r in rows:
-                if str(r.get("name", "")).startswith(SMOKE_PREFIX):
+                if str(r.get("name", "")).startswith((SMOKE_PREFIX, API_KEY_PREFIX)):
                     print(f"  sweeping api key {r['name']}")
                     self.q(f"DELETE FROM supabase.secrets.api_keys WHERE id = '{r['id']}'")
+                    time.sleep(API_KEY_WRITE_DELAY_S)
         self.q(f"INSERT INTO supabase.database.queries (query) SELECT 'drop table if exists {FIXTURE_TABLE}' RETURNING rows")
         if self.args.with_project_lifecycle or self.args.cleanup_only:
             rows, err = self.q("SELECT id, name, status FROM supabase.projects.projects")
@@ -243,7 +300,12 @@ class Smoke:
     def read_smokes(self) -> None:
         print("== read smokes ==")
         self.step("show services", "SHOW SERVICES IN supabase", expect_rows=True, contains="projects")
-        self.step("profile (the PAT identity)", "SELECT primary_email, username FROM supabase.profile.profiles", expect_rows=True)
+        if self.token_is_user_scoped():
+            self.step("profile (the PAT identity)", "SELECT primary_email, username FROM supabase.profile.profiles", expect_rows=True)
+        else:
+            reason = "organization-scoped token: /v1/profile needs a user-scoped (personal) token"
+            self.results.append(("profile (the PAT identity)", "SKIP", reason))
+            print(f"  SKIP  profile (the PAT identity)  [{reason}]")
         orgs = self.step("organizations list", "SELECT id, slug, name FROM supabase.organizations.organizations", expect_rows=True)
         self.step("projects estate inventory", "SELECT id, name, region, status, organization_slug FROM supabase.projects.projects", expect_rows=True, contains=self.ref)
         self.step("project get (WHERE ref)", f"SELECT name, status, json_extract(\"database\", '$.version') AS pg FROM supabase.projects.projects WHERE ref = '{self.ref}'", expect_rows=True)
@@ -253,7 +315,8 @@ class Smoke:
             self.step("organization members", f"SELECT user_name, role_name, mfa_enabled FROM supabase.organizations.members WHERE slug = '{slug}'", expect_rows=True)
         # the posture set (ref resolved from SUPABASE_PROJECT_ID - no WHERE)
         self.step("auth config posture (signups, MFA, password policy)", "SELECT disable_signup, mfa_totp_enroll_enabled, password_min_length, site_url, mailer_otp_exp FROM supabase.config.auth_configs", expect_rows=True)
-        self.step("postgres config (flat columns)", "SELECT max_connections, statement_timeout, work_mem FROM supabase.config.postgres_configs", expect_rows=True)
+        self.step("postgres config (flat columns)", "SELECT max_connections, statement_timeout, work_mem FROM supabase.config.postgres_configs", expect_rows=True,
+                  skip_if_empty="project has no Postgres overrides (API returns {}); the engine cannot bind an empty flat object - NOTES.md finding 18")
         self.step("ssl enforcement (snake aliases)", "SELECT applied_successfully, json_extract(current_config, '$.database') AS db_ssl FROM supabase.config.ssl_enforcement_configs", expect_rows=True)
         self.step("network restrictions", "SELECT entitlement, status, json_extract(config, '$.dbAllowedCidrs') AS cidrs FROM supabase.network.network_restrictions", expect_rows=True)
         self.step("network bans (POST-backed read)", "SELECT banned_address, identifier FROM supabase.network.network_bans")
@@ -284,7 +347,7 @@ class Smoke:
         self.note("secret gone after DELETE", not err and all(r.get("name") != name for r in rows), err or "")
 
     def api_key_lifecycle(self) -> None:
-        name = self.name
+        name = self.api_key_name
         print(f"== API key lifecycle ({name}) ==")
         self.step("api key INSERT (type secret)", f"INSERT INTO supabase.secrets.api_keys (type, name, description) SELECT 'secret', '{name}', 'stackql smoke'")
         rows, err = self.q("SELECT id, name FROM supabase.secrets.api_keys")
@@ -293,7 +356,9 @@ class Smoke:
         if not key:
             return
         self.step("api key get", f"SELECT name, type FROM supabase.secrets.api_keys WHERE id = '{key['id']}'", expect_rows=True, contains="secret")
+        time.sleep(API_KEY_WRITE_DELAY_S)
         self.step("api key UPDATE (description)", f"UPDATE supabase.secrets.api_keys SET description = 'stackql smoke v2' WHERE id = '{key['id']}'")
+        time.sleep(API_KEY_WRITE_DELAY_S)
         self.step("api key DELETE", f"DELETE FROM supabase.secrets.api_keys WHERE id = '{key['id']}'")
         rows, err = self.q("SELECT id FROM supabase.secrets.api_keys")
         self.note("api key gone after DELETE", not err and all(r.get("id") != key["id"] for r in rows), err or "")
@@ -397,12 +462,12 @@ class Smoke:
     # ---------------------------------------------------------------- summary
     def summary(self) -> int:
         print("\n== summary ==")
-        counts = {"PASS": 0, "FAIL": 0}
+        counts = {"PASS": 0, "FAIL": 0, "SKIP": 0}
         for name, status, note in self.results:
             counts[status] = counts.get(status, 0) + 1
             if status != "PASS":
                 print(f"  {status:5s} {name}  [{note[:110]}]")
-        print(f"  {counts['PASS']} passed, {counts['FAIL']} failed; {self.requests} statements, paced at {INTER_REQUEST_DELAY_S}s "
+        print(f"  {counts['PASS']} passed, {counts['FAIL']} failed, {counts['SKIP']} skipped; {self.requests} statements, paced at {INTER_REQUEST_DELAY_S}s "
               f"(registry: {'public' if self.args.live else 'local'}, project: {self.ref})")
         return 1 if counts["FAIL"] else 0
 
@@ -419,6 +484,8 @@ def main() -> int:
     smoke = Smoke(args)
     print(f"supabase smoke test  registry={'public' if args.live else 'local'}  project={smoke.ref}  "
           f"name={smoke.name}  stackql={smoke.sq.version}")
+    if args.live:
+        smoke.pull_published_provider()
     smoke.cleanup_breadcrumbs()
     if args.cleanup_only:
         return 0

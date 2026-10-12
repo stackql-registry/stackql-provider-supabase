@@ -27,6 +27,7 @@ Query, provision and operate the Supabase control plane using SQL - organization
 
 total services: __14__  
 total resources: __65__  
+source project: __[stackql-provider-supabase](https://github.com/stackql-registry/stackql-provider-supabase)__  
 
 :::
 
@@ -45,7 +46,7 @@ REGISTRY PULL supabase;
 
 ## Scope
 
-This provider covers the Supabase Management API at `https://api.supabase.com` (the control plane): organizations, projects, branches, functions, secrets, configuration, domains, networking, backups, billing add-ons, advisors, analytics and the project SQL query endpoint. The per-project data APIs (PostgREST at `<ref>.supabase.co/rest/v1`, Realtime, Storage object I/O, GoTrue user-facing auth) are per-project hosts with per-project keys - a different surface, reserved as a possible future `supabase_project` sibling provider. Supabase's official Terraform provider is labelled Public Alpha by the vendor and covers seven resources; this provider's surface is generated mechanically from the vendor's published OpenAPI document (159 operations across 15 services).
+This provider covers the Supabase Management API at `https://api.supabase.com` (the control plane): organizations, projects, branches, functions, secrets, configuration, domains, networking, backups, billing add-ons, advisors, analytics and the project SQL query endpoint. The per-project data APIs (PostgREST at `<ref>.supabase.co/rest/v1`, Realtime, Storage object I/O, GoTrue user-facing auth) are per-project hosts with per-project keys - a different surface, reserved as a possible future `supabase_project` sibling provider. Supabase's official Terraform provider is labelled Public Alpha by the vendor and covers seven resources; this provider's surface is generated mechanically from the vendor's published OpenAPI document (158 operations across 14 services and 65 resources).
 
 ## Authentication
 
@@ -62,6 +63,8 @@ or using PowerShell:
 $env:SUPABASE_ACCESS_TOKEN = 'sbp_...'
 $env:SUPABASE_PROJECT_ID = 'abcdefghijklmnopqrst'
 ```
+
+Organization-scoped access tokens work throughout the provider except `profile.profiles`, which requires a user-scoped (personal) token.
 
 ## Project scope
 
@@ -87,6 +90,10 @@ The Management API allows a fixed number of requests per minute per user (docume
 ## Beta endpoints
 
 The vendor labels part of the surface `[Beta]` (and one endpoint `[Alpha]`); the label is carried through as the first line of each method's description. The query endpoint, network restrictions and bans, custom domains, SSL enforcement, read replicas, JIT access and the upgrade surface are beta. A few operations are deprecated by the vendor (the advisors reads, `logs.all`, the database context read and the JSON edge function create) and stay mapped with the deprecation noted. Refreshes of the provider are reviewed spec diffs against a content-hash pin.
+
+## Known limitations
+
+`config.postgres_configs` returns the Postgres settings a project has overridden. On a project with no overrides the API returns an empty object, which the current StackQL engine cannot materialise as a row - the query returns no rows (an `sql insert error` in verbose output) rather than a row of nulls. Projects with at least one override return the row as expected.
 
 ## Example queries
 

@@ -16,6 +16,14 @@ const config = createConfig({
   },
 });
 
+// This provider's website lives at website/ within the canonical
+// stackql-registry/stackql-provider-supabase repo, so the "Edit this page"
+// links point at that subdirectory (the shared config default omits the
+// website/ path).
+config.projectName = 'stackql-provider-supabase';
+config.presets[0][1].docs.editUrl =
+  'https://github.com/stackql-registry/stackql-provider-supabase/edit/main/website/';
+
 // Use the locally vendored registry-branded logos (STACKQL>> | REGISTRY)
 // instead of the shared config's hotlinked main-site wordmark -
 // self-contained assets, no cross-origin fetch. global.css swaps in the
