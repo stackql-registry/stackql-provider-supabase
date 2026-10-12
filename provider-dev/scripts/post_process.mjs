@@ -54,6 +54,16 @@
 //    bans) get the naive translation here so their attributes are plain
 //    WHERE keys.
 //
+// 8. Orphan path parameters. OpenAPI requires every `in: path` parameter to
+//    have a matching {name} placeholder in its path key. The ref rebase moves
+//    {ref} out of the path key into the server template, and anything the
+//    rebase did not reach (an operation verb outside the mapped set, such as
+//    the HEAD action-run count) is left declaring a path parameter the path
+//    no longer carries. Every path-item and operation parameter list is
+//    checked against its path key here, for all OpenAPI operation verbs, and
+//    orphans are dropped. Generic by construction: no parameter names, verbs
+//    or paths are special-cased.
+//
 // Usage: node provider-dev/scripts/post_process.mjs
 
 import fs from 'fs';
@@ -65,6 +75,8 @@ import { API_BASE_URL } from './lib/spec_helpers.mjs';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const servicesDir = path.join(repoRoot, 'provider-dev', 'openapi', 'src', 'supabase', 'v00.00.00000', 'services');
 const QUERY_RESULT_SCHEMA_NAME = 'V1RunQueryResultRows';
+// every operation verb OpenAPI 3 allows on a path item
+const OPENAPI_OPERATION_VERBS = ['get', 'put', 'post', 'delete', 'options', 'head', 'patch', 'trace'];
 
 // methods whose request bodies carry camelCase attributes
 const CAMEL_BODY_METHODS = [
@@ -177,6 +189,34 @@ for (const [f, resource, name] of [['secrets.yaml', 'secrets', 'delete'], ['netw
   naiveDeletes++;
 }
 
+// 8. orphan path parameters: drop `in: path` parameters with no {name} in the path key
+const orphanPathParams = [];
+for (const [f, doc] of docs) {
+  const componentParams = doc.components?.parameters || {};
+  const resolve = (p) => {
+    if (!p?.$ref) return p;
+    const m = /^#\/components\/parameters\/(.+)$/.exec(p.$ref);
+    return m ? componentParams[decodeURIComponent(m[1])] : undefined;
+  };
+  for (const [pathKey, item] of Object.entries(doc.paths || {})) {
+    const placeholders = new Set([...pathKey.matchAll(/\{([^}]+)\}/g)].map((x) => x[1]));
+    const prune = (owner, where) => {
+      if (!Array.isArray(owner.parameters) || owner.parameters.length === 0) return;
+      owner.parameters = owner.parameters.filter((p) => {
+        const r = resolve(p);
+        if (!r || r.in !== 'path' || placeholders.has(r.name)) return true;
+        orphanPathParams.push(`${f}: ${where} ${pathKey} declares path parameter '${r.name}' with no {${r.name}} in the path`);
+        return false;
+      });
+      if (owner.parameters.length === 0) delete owner.parameters;
+    };
+    prune(item, 'path item');
+    for (const verb of OPENAPI_OPERATION_VERBS) {
+      if (item[verb]) prune(item[verb], verb.toUpperCase());
+    }
+  }
+}
+
 if (errors.length > 0) {
   console.error(`FAILED with ${errors.length} error(s), nothing written:`);
   for (const e of errors) console.error(`  ${e}`);
@@ -185,3 +225,5 @@ if (errors.length > 0) {
 for (const [f, d] of docs) fs.writeFileSync(path.join(servicesDir, f), yaml.dump(d, { lineWidth: -1, noRefs: true }));
 console.log(`post_process: pinned ${counts.rootPathsPinned} root path item(s) to ${API_BASE_URL} across ${docs.size} services (${counts.refPaths} project-scoped paths on the server template)`);
 console.log(`post_process: snippets cursor pagination; request.nativeCasing: camel on ${counts.nativeCasing} methods; query result binding on queries.run / run_read_only; objectKey on network_bans.list; secrets bulk-body request transforms; naive body translation on ${naiveDeletes} DELETE methods`);
+console.log(`post_process: dropped ${orphanPathParams.length} orphan path parameter(s)`);
+for (const o of orphanPathParams) console.log(`  ${o}`);

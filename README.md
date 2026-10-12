@@ -150,7 +150,7 @@ npm run generate-provider -- \
 node provider-dev/scripts/post_process.mjs
 ```
 
-`--naive-req-body-translate` exposes top-level request body properties as columns, so `INSERT INTO supabase.secrets.secrets (name, value) ...` and `UPDATE supabase.config.auth_configs SET disable_signup = 'true'` render the wire bodies as written. `post_process.mjs` pins the non-project paths to the API base (path-level `servers`), configures cursor pagination on `snippets.list`, sets `request.nativeCasing: camel` on the three camelCase-body methods, attaches the query endpoint's result binding, the POST-backed `network_bans.list` objectKey, the secrets request transforms (single-item object -> the bare array the wire expects) and naive body translation on the two DELETEs with bodies, and validates that every other path is project-relative.
+`--naive-req-body-translate` exposes top-level request body properties as columns, so `INSERT INTO supabase.secrets.secrets (name, value) ...` and `UPDATE supabase.config.auth_configs SET disable_signup = 'true'` render the wire bodies as written. `post_process.mjs` pins the non-project paths to the API base (path-level `servers`), configures cursor pagination on `snippets.list`, sets `request.nativeCasing: camel` on the three camelCase-body methods, attaches the query endpoint's result binding, the POST-backed `network_bans.list` objectKey, the secrets request transforms (single-item object -> the bare array the wire expects) and naive body translation on the two DELETEs with bodies, drops orphan path parameters (an `in: path` parameter with no `{name}` placeholder in its path key, checked on every OpenAPI operation verb), and validates that every other path is project-relative.
 
 ### Server parameters
 
