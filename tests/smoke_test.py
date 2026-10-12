@@ -242,6 +242,22 @@ class Smoke:
         return blob or []
 
     # ------------------------------------------------------- breadcrumb sweep
+    def pull_published_provider(self) -> None:
+        # --live verifies the published provider; pull the current registry
+        # version explicitly (the binary does not auto-pull under pystackql:
+        # SHOW/SELECT return no rows, and every step reads as "no rows") and
+        # fail fast if the pull or the first SHOW does not succeed.
+        print("== registry pull ==")
+        try:
+            out = self.sq.executeStmt("REGISTRY PULL supabase")
+        except Exception as exc:  # noqa: BLE001
+            sys.exit(f"REGISTRY PULL supabase failed: {exc}")
+        print(f"  {json.dumps(out, default=str)[:160]}")
+        rows, err = self.q("SHOW SERVICES IN supabase")
+        if err or not rows:
+            sys.exit(f"published supabase provider did not load after REGISTRY PULL: {err or 'SHOW SERVICES returned no rows'}")
+        print(f"  {len(rows)} services")
+
     def cleanup_breadcrumbs(self) -> None:
         print("== breadcrumb sweep ==")
         rows, err = self.q("SELECT name FROM supabase.secrets.secrets")
@@ -468,6 +484,8 @@ def main() -> int:
     smoke = Smoke(args)
     print(f"supabase smoke test  registry={'public' if args.live else 'local'}  project={smoke.ref}  "
           f"name={smoke.name}  stackql={smoke.sq.version}")
+    if args.live:
+        smoke.pull_published_provider()
     smoke.cleanup_breadcrumbs()
     if args.cleanup_only:
         return 0
